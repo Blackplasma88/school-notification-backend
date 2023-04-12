@@ -36,7 +36,20 @@ func CheckIntegerData(data *int, name string) (int, error) {
 		return 0, ReturnError(ErrRequireParameter.Error() + name)
 	}
 
-	if *data <= 0 {
+	if *data < 0 {
+		return 0, ReturnError(name + ErrValueInvalid.Error())
+	}
+
+	return *data, nil
+}
+
+func CheckFloatData(data *float64, name string) (float64, error) {
+
+	if data == nil {
+		return 0, ReturnError(ErrRequireParameter.Error() + name)
+	}
+
+	if *data < 0.0 {
 		return 0, ReturnError(name + ErrValueInvalid.Error())
 	}
 

@@ -20,9 +20,9 @@ type Slot struct {
 }
 
 type TimeSlot struct {
-	Time      string `json:"time" bson:"time"`
-	Status    bool   `json:"status" bson:"status"`
-	CoursesId string `json:"courses_id" bson:"courses_id"`
+	Time     string              `json:"time" bson:"time"`
+	Status   bool                `json:"status" bson:"status"`
+	CourseId *primitive.ObjectID `json:"course_id,omitempty" bson:"course_id,omitempty"`
 }
 
 type LocationRequest struct {

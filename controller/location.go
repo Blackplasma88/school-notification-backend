@@ -65,8 +65,8 @@ func (l *locationController) CreateLocation(c *fiber.Ctx) error {
 
 	_, err = l.locationRepo.GetLocationByFilter(bson.M{"building_name": buildingName, "floor": floor, "room": room})
 	if err == nil {
-		log.Println("subject id already exists")
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "subject id"+util.ErrValueAlreadyExists.Error())
+		log.Println("location already exists")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "location"+util.ErrValueAlreadyExists.Error())
 	}
 	if err.Error() != "mongo: no documents in result" {
 		log.Println(err)
@@ -182,7 +182,7 @@ func (l *locationController) UpdateLocationData(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
-	return util.ResponseSuccess(c, fiber.StatusOK, "update success", map[string]interface{}{
+	return util.ResponseSuccess(c, fiber.StatusOK, "update location success", map[string]interface{}{
 		"location_id":  location.LocationId,
 		"update_count": locationUpdate.ModifiedCount,
 	})
@@ -241,7 +241,7 @@ func (l *locationController) GetLocationById(c *fiber.Ctx) error {
 
 func createTimeSlot() []models.Slot {
 	var slot []models.Slot
-	day := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday"}
+	day := []string{"monday", "tuesday", "wednesday", "thursday", "friday"}
 	time := []string{"08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00"}
 
 	for _, d := range day {
@@ -254,6 +254,7 @@ func createTimeSlot() []models.Slot {
 				Status: false,
 			})
 		}
+		slot = append(slot, s)
 	}
 
 	return slot

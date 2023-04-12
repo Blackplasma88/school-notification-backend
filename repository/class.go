@@ -19,6 +19,7 @@ type ClassRepository interface {
 	GetAll() (classes []*models.ClassData, err error)
 	GetClassById(id string) (class *models.ClassData, err error)
 	GetClassByFilter(filter interface{}) (class *models.ClassData, err error)
+	GetClassByFilterAll(filter interface{}) (classes []*models.ClassData, err error)
 	GetCountOfClassYear(classYear string) (num int, err error)
 }
 
@@ -99,6 +100,36 @@ func (c *classRepository) GetClassByFilter(filter interface{}) (class *models.Cl
 	}
 
 	return class, result.Err()
+}
+
+func (c *classRepository) GetClassByFilterAll(filter interface{}) (classes []*models.ClassData, err error) {
+
+	cur, err := c.c.Find(c.ctx, filter, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for cur.Next(c.ctx) {
+		var b *models.ClassData
+		err := cur.Decode(&b)
+		if err != nil {
+			return nil, err
+		}
+
+		classes = append(classes, b)
+	}
+
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	cur.Close(c.ctx)
+
+	if len(classes) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+
+	return classes, nil
 }
 
 func (c *classRepository) GetCountOfClassYear(classYear string) (num int, err error) {

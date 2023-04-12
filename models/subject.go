@@ -15,11 +15,11 @@ type Subject struct {
 }
 
 type SubjectRequest struct {
-	Event        string   `json:"event"`
-	SubjectId    string   `json:"subject_id"`
-	Name         string   `json:"name"`
-	InstructorId []string `json:"instructor_id"`
-	Credit       *int     `json:"credit"`
-	Category     string   `json:"category" bson:"category"`
-	ClassYear    string   `json:"class_year" bson:"class_year"`
+	Event        string `json:"event"`
+	SubjectId    string `json:"subject_id"`
+	Name         string `json:"name"`
+	InstructorId string `json:"instructor_id"`
+	Credit       *int   `json:"credit"`
+	Category     string `json:"category" bson:"category"`
+	ClassYear    string `json:"class_year" bson:"class_year"`
 }

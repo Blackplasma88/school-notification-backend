@@ -13,6 +13,11 @@ import (
 const profileCollection = "profiles"
 
 type ProfileRepository interface {
+	Insert(profile interface{}) (*mongo.InsertOneResult, error)
+	Update(id primitive.ObjectID, filter interface{}) (*mongo.UpdateResult, error)
+	GetProfileByFilterForCheckExists(filter interface{}) (err error)
+	GetProfileById(filter interface{}, role string) (profile interface{}, err error)
+	GetAll(role string) (profiles []interface{}, err error)
 }
 
 type profileRepository struct {
@@ -61,6 +66,16 @@ func (p *profileRepository) GetAll(role string) (profiles []interface{}, err err
 
 			profiles = append(profiles, b)
 		}
+	} else if role == "student" {
+		for cur.Next(p.ctx) {
+			var b *models.ProfileStudent
+			err := cur.Decode(&b)
+			if err != nil {
+				return nil, err
+			}
+
+			profiles = append(profiles, b)
+		}
 	}
 
 	if err := cur.Err(); err != nil {
@@ -74,4 +89,27 @@ func (p *profileRepository) GetAll(role string) (profiles []interface{}, err err
 	}
 
 	return profiles, nil
+}
+
+func (p *profileRepository) GetProfileById(filter interface{}, role string) (profile interface{}, err error) {
+
+	result := p.c.FindOne(p.ctx, filter)
+
+	if role == "teacher" {
+		p := models.ProfileTeacher{}
+		err = result.Decode(&p)
+		if err != nil {
+			return nil, err
+		}
+		profile = p
+	} else if role == "student" {
+		p := models.ProfileStudent{}
+		err = result.Decode(&p)
+		if err != nil {
+			return nil, err
+		}
+		profile = p
+	}
+
+	return profile, result.Err()
 }
