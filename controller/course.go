@@ -153,10 +153,10 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 		Term:            term,
 		Name:            subject.Name + "-" + year + "-" + term,
 		Credit:          subject.Credit,
-		LocationId:      location.Id,
+		LocationId:      &location.Id,
 		NumberOfStudent: class.NumberOfStudent,
 		StudentIdList:   class.StudentIdList,
-		ClassId:         class.Id,
+		ClassId:         &class.Id,
 		ClassYear:       class.Year,
 		ClassRoom:       class.ClassRoom,
 	}
@@ -351,6 +351,26 @@ func (cc *courseController) ChangeCourseStatus(c *fiber.Ctx) error {
 		if course.Status != "summary" {
 			log.Println("status invalid")
 			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ReturnErrorStatusInvalid("course", "summary").Error())
+		}
+
+		if course.SubjectId == "" {
+			log.Println("subject id is nil")
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "subject id is nil")
+		}
+
+		if course.InstructorId == "" {
+			log.Println("instructor id is nil")
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "instructor id is nil")
+		}
+
+		if course.LocationId == nil {
+			log.Println("location id is nil")
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "location id is nil")
+		}
+
+		if course.ClassId == nil {
+			log.Println("class id is nil")
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "class id is nil")
 		}
 
 		course.Status = "progress"
@@ -601,6 +621,7 @@ func (cc *courseController) FinishCourse(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ReturnErrorStatusInvalid("course", "summary").Error())
 	}
 
+	log.Println("get course summary")
 	courseSum, err := cc.courseSummaryRepo.GetByFilter(bson.M{"course_id": id})
 	if err != nil && err.Error() != "mongo: no documents in result" {
 		log.Println(err)
@@ -630,6 +651,10 @@ func (cc *courseController) FinishCourse(c *fiber.Ctx) error {
 				totalTermGrade := 0.0
 				for j, courseList := range t.CourseList {
 					if courseList.Id == course.Id {
+						if profile.TermScore[i].CourseList[j].Credit != 0 {
+							profile.TermScore[i].TermCredit -= profile.TermScore[i].CourseList[j].Credit
+							profile.AllCredit -= profile.TermScore[i].CourseList[j].Credit
+						}
 						// profile.TermScore[i].CourseList[j].CreatedAt = time.Now().Format(time.RFC3339)
 						profile.TermScore[i].CourseList[j].Grade = sData.Grade
 						profile.TermScore[i].CourseList[j].ScoreWorkGet = sData.ScoreWorkGet
@@ -683,7 +708,8 @@ func (cc *courseController) FinishCourse(c *fiber.Ctx) error {
 	}
 
 	// update location
-	location, err := cc.locationRepo.GetLocationByFilter(bson.M{"location_id": course.LocationId.Hex()})
+	log.Println("get location")
+	location, err := cc.locationRepo.GetLocationById(course.LocationId.Hex())
 	if err != nil {
 		log.Println(err)
 		if err.Error() == "mongo: no documents in result" {

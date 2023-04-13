@@ -15,6 +15,7 @@ import (
 
 type CourseSummaryController interface {
 	SummaryCourse(c *fiber.Ctx) error
+	GetSummaryCourse(c *fiber.Ctx) error
 }
 
 type courseSummaryController struct {
@@ -26,6 +27,65 @@ type courseSummaryController struct {
 
 func NewCourseSummaryController(courseSummaryRepo repository.CourseSummaryRepository, courseRepo repository.CourseRepository, scoreRepository repository.ScoreRepository, checkNameRepository repository.CheckNameRepository) CourseSummaryController {
 	return &courseSummaryController{courseSummaryRepo: courseSummaryRepo, courseRepo: courseRepo, scoreRepository: scoreRepository, checkNameRepository: checkNameRepository}
+}
+
+func (cs *courseSummaryController) GetSummaryCourse(c *fiber.Ctx) error {
+
+	courseId, err := util.CheckStringData(c.Query("course_id"), "course_id")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("find course summary by course id:", courseId)
+
+	role, err := util.CheckStringData(c.Query("role"), "role")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("role:", role)
+
+	courseSum, err := cs.courseSummaryRepo.GetByFilter(bson.M{"course_id": courseId})
+	if err != nil {
+		log.Println(err)
+		if err == mongo.ErrNoDocuments {
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		}
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	var res interface{}
+	if role == "teacher" {
+		res = courseSum.StudentData
+	} else if role == "student" {
+		studentId, err := util.CheckStringData(c.Query("student_id"), "student_id")
+		if err != nil {
+			log.Println(err)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		log.Println("find course summary by student id:", studentId)
+
+		check := true
+		for _, v := range courseSum.StudentData {
+			if v.StudentId == studentId {
+				res = v
+				check = false
+				break
+			}
+		}
+		if check {
+			log.Println("not found")
+			return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, util.ErrNotFound.Error())
+		}
+
+	} else {
+		log.Println("role", util.ErrValueInvalid)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"course_summary": res,
+	})
 }
 
 func (cs *courseSummaryController) SummaryCourse(c *fiber.Ctx) error {
@@ -66,24 +126,27 @@ func (cs *courseSummaryController) SummaryCourse(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "course status does not progress")
 	}
 
+	log.Println("get scores")
 	scores, err := cs.scoreRepository.GetByFilterAll(bson.M{"course_id": courseId})
-	if err != nil {
+	if err != nil && err != mongo.ErrNoDocuments {
 		log.Println(err)
-		if err == mongo.ErrNoDocuments {
-			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
-		}
+		// if err == mongo.ErrNoDocuments {
+		// 	return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		// }
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
+	log.Println("get check name list")
 	checkNameList, err := cs.checkNameRepository.GetByFilterAll(bson.M{"course_id": courseId})
-	if err != nil {
+	if err != nil && err != mongo.ErrNoDocuments {
 		log.Println(err)
-		if err == mongo.ErrNoDocuments {
-			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
-		}
+		// if err == mongo.ErrNoDocuments {
+		// 	return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		// }
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
+	log.Println("check summary")
 	courseSum, err := cs.courseSummaryRepo.GetByFilter(bson.M{"course_id": courseId})
 	if err != nil && err.Error() != "mongo: no documents in result" {
 		log.Println(err)

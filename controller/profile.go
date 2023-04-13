@@ -18,6 +18,7 @@ import (
 type ProfileController interface {
 	CreateNewProfile(c *fiber.Ctx) error
 	GetProfileById(c *fiber.Ctx) error
+	GetProfileAll(c *fiber.Ctx) error
 }
 
 type profileController struct {

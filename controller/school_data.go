@@ -307,7 +307,8 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 		return dataList[i].CreatedAt > dataList[j].CreatedAt
 	})
 
-	data := dataList[len(dataList)-1]
+	// data := dataList[len(dataList)-1]
+	data := dataList[0]
 
 	if data.Status == nil || *data.Status == true {
 		log.Println("school data invalid")
@@ -322,12 +323,13 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 	}
 
 	// check and finish course
+	log.Println("get course list in term")
 	courseList, err := s.courseRepo.GetCourseAllByFilter(bson.M{"year": *data.Year, "term": *data.Term})
-	if err != nil {
+	if err != nil && err.Error() != "mongo: no documents in result" {
 		log.Println(err)
-		if err.Error() == "mongo: no documents in result" {
-			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
-		}
+		// if err.Error() == "mongo: no documents in result" {
+		// 	return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		// }
 		if err.Error() == "Id is not primitive objectID" {
 			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
 		}
@@ -426,7 +428,8 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 			}
 
 			// clear location
-			location, err := s.locationRepo.GetLocationByFilter(bson.M{"location_id": cl.LocationId.Hex()})
+			log.Println("get location in course:", cl.Name)
+			location, err := s.locationRepo.GetLocationById(cl.LocationId.Hex())
 			if err != nil {
 				log.Println(err)
 				if err.Error() == "mongo: no documents in result" {
@@ -497,6 +500,7 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 	}
 
 	// update class data
+	log.Println("get all class")
 	classes, err := s.classRepo.GetClassByFilterAll(bson.M{"status": false})
 	if err != nil {
 		log.Println(err)
@@ -510,22 +514,24 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 		if class.Year == *dataNew.Year && class.Term == *dataNew.Term {
 			continue
 		}
-		if class.ClassYear != "6" {
+		if class.Status != true {
 			class.Year = *dataNew.Year
 			class.Term = *dataNew.Term
 		}
-		if class.ClassYear == "1" {
-			class.ClassYear = "2"
-		} else if class.ClassYear == "2" {
-			class.ClassYear = "3"
-		} else if class.ClassYear == "3" {
-			class.ClassYear = "4"
-		} else if class.ClassYear == "4" {
-			class.ClassYear = "5"
-		} else if class.ClassYear == "5" {
-			class.ClassYear = "6"
-		} else if class.ClassYear == "6" {
-			class.Status = true
+		if class.Term == "1" {
+			if class.ClassYear == "1" {
+				class.ClassYear = "2"
+			} else if class.ClassYear == "2" {
+				class.ClassYear = "3"
+			} else if class.ClassYear == "3" {
+				class.ClassYear = "4"
+			} else if class.ClassYear == "4" {
+				class.ClassYear = "5"
+			} else if class.ClassYear == "5" {
+				class.ClassYear = "6"
+			} else if class.ClassYear == "6" {
+				class.Status = true
+			}
 		}
 
 		_, err = s.classRepo.Update(class)
@@ -535,6 +541,7 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 		}
 
 		// update profile student term
+		log.Println("get student in class:", class.Id)
 		if class.Status == false {
 			for _, sid := range class.StudentIdList {
 				filter := bson.M{
@@ -580,6 +587,7 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 	}
 
 	// update teacher student term
+	log.Println("get all teacher")
 	p, err := s.profileRepo.GetAll("teacher")
 	if err != nil {
 		log.Println(err)

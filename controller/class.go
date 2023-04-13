@@ -57,8 +57,11 @@ func (cl *classController) CreateClass(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, "school data invalid")
 	}
 
-	year := *dataList[len(dataList)-1].Year
-	term := *dataList[len(dataList)-1].Term
+	for _, v := range dataList {
+		log.Println(*v.Year, ":", *v.Term)
+	}
+	year := *dataList[0].Year
+	term := *dataList[0].Term
 
 	classNew := &models.ClassData{
 		Id:        primitive.NewObjectID(),
