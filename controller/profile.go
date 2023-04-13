@@ -19,6 +19,7 @@ type ProfileController interface {
 	CreateNewProfile(c *fiber.Ctx) error
 	GetProfileById(c *fiber.Ctx) error
 	GetProfileAll(c *fiber.Ctx) error
+	GetProfileTeacherByCategory(c *fiber.Ctx) error
 }
 
 type profileController struct {
@@ -77,6 +78,42 @@ func (p *profileController) GetProfileById(c *fiber.Ctx) error {
 	}
 
 	profile, err := p.profileRepo.GetProfileById(filter, role)
+	if err != nil {
+		log.Println(err)
+		if err.Error() == "mongo: no documents in result" {
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		}
+		if err.Error() == "Id is not primitive objectID" {
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	if profile == nil {
+		log.Println("Profile not found")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"profile": profile,
+	})
+}
+
+func (p *profileController) GetProfileTeacherByCategory(c *fiber.Ctx) error {
+
+	category, err := util.CheckStringData(c.Query("category"), "category")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("find profile category:", category)
+
+	filter := bson.M{
+		"category": category,
+		"role":     "teacher",
+	}
+
+	profile, err := p.profileRepo.GetProfileById(filter, "teacher")
 	if err != nil {
 		log.Println(err)
 		if err.Error() == "mongo: no documents in result" {

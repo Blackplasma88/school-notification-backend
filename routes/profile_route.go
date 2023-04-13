@@ -17,6 +17,7 @@ func NewProfileRoute(profileController controller.ProfileController) Routes {
 func (r *profileRoutes) Install(app *fiber.App) {
 	app.Get("/profile/all", r.profileController.GetProfileAll)
 	app.Get("/profile/id", r.profileController.GetProfileById)
+	app.Get("/profile/teacher/category", r.profileController.GetProfileTeacherByCategory)
 
 	app.Post("/profile/create", r.profileController.CreateNewProfile)
 	// app.Post("/profile/update", r.profileController.UpdateProfile)
