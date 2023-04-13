@@ -17,6 +17,7 @@ type CourseRepository interface {
 	Insert(course *models.Course) (*mongo.InsertOneResult, error)
 	Update(course *models.Course) (*mongo.UpdateResult, error)
 	GetCourseById(id string) (course *models.Course, err error)
+	GetCourseByFilter(filter interface{}) (course *models.Course, err error)
 	GetCourseAllByFilter(filter interface{}) (courses []*models.Course, err error)
 }
 
@@ -85,4 +86,16 @@ func (c *courseRepository) GetCourseAllByFilter(filter interface{}) (courses []*
 	}
 
 	return courses, nil
+}
+
+func (c *courseRepository) GetCourseByFilter(filter interface{}) (course *models.Course, err error) {
+
+	result := c.c.FindOne(c.ctx, filter)
+
+	err = result.Decode(&course)
+	if err != nil {
+		return nil, err
+	}
+
+	return course, result.Err()
 }

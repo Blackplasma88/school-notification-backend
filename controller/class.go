@@ -57,9 +57,6 @@ func (cl *classController) CreateClass(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, "school data invalid")
 	}
 
-	for _, v := range dataList {
-		log.Println(*v.Year, ":", *v.Term)
-	}
 	year := *dataList[0].Year
 	term := *dataList[0].Term
 
@@ -72,6 +69,7 @@ func (cl *classController) CreateClass(c *fiber.Ctx) error {
 		Status:    false,
 		Year:      year,
 		Term:      term,
+		Slot:      createTimeSlot(),
 	}
 
 	class, err := cl.classRepo.Insert(classNew)

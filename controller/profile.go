@@ -240,6 +240,7 @@ func newTeacherProfile(req models.ProfileRequest, profileRepo repository.Profile
 		Name:      name,
 		Role:      req.Role,
 		Category:  category,
+		Slot:      createTimeSlot(),
 		CourseTeachesList: []models.CourseTeachesList{
 			{
 				Year: year,

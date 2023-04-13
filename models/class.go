@@ -14,6 +14,7 @@ type ClassData struct {
 	Term            string             `json:"term" bson:"term"`
 	NumberOfStudent int                `json:"number_of_student" bson:"number_of_student"`
 	StudentIdList   []string           `json:"student_id_list" bson:"student_id_list"`
+	Slot            []Slot             `json:"slot" bson:"slot"`
 }
 
 type ClassRequest struct {

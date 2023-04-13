@@ -24,6 +24,7 @@ type ProfileTeacher struct {
 	SubjectId         string              `json:"subject_id" bson:"subject_id"`
 	ClassInCounseling string              `json:"class_in_counseling" bson:"class_in_counseling"`
 	CourseTeachesList []CourseTeachesList `json:"course_teaches_list" bson:"course_teaches_list"`
+	Slot              []Slot              `json:"slot" bson:"slot"`
 }
 
 type CourseTeachesList struct {

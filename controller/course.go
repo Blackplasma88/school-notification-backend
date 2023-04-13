@@ -59,13 +59,13 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 		return dataList[i].CreatedAt > dataList[j].CreatedAt
 	})
 
-	if *dataList[len(dataList)-1].Status == true {
+	if *dataList[0].Status == true {
 		log.Println("school data invalid")
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, "school data invalid")
 	}
 
-	year := *dataList[len(dataList)-1].Year
-	term := *dataList[len(dataList)-1].Term
+	year := *dataList[0].Year
+	term := *dataList[0].Term
 
 	subjectId, err := util.CheckStringData(req.SubjectId, "subject_id")
 	if err != nil {
@@ -142,6 +142,17 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
+	// check create course again
+	_, err = cc.courseRepo.GetCourseByFilter(bson.M{"subject_id": subjectId, "class_id": classId})
+	if err == nil {
+		log.Println("course data subject and class already exists")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "course data subject and class"+util.ErrValueAlreadyExists.Error())
+	}
+	if err.Error() != "mongo: no documents in result" {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
 	courseNew := &models.Course{
 		Id:              primitive.NewObjectID(),
 		CreatedAt:       time.Now().Format(time.RFC3339),
@@ -164,65 +175,6 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 	if len(req.DateTime) == 0 {
 		log.Println(util.ErrRequireParameter.Error() + "date_time")
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrRequireParameter.Error()+"date_time")
-	}
-	// dateTime := []models.DateTime{}
-	for _, dt := range req.DateTime {
-		day, err := util.CheckStringData(dt.Day, "day")
-		if err != nil {
-			log.Println(err)
-			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
-		}
-		log.Println("day:", day)
-		checkDay := true
-		for li, slot := range location.Slot {
-			if dt.Day == slot.Day {
-				check := true
-				if len(dt.Time) == 0 {
-					log.Println(util.ErrRequireParameter.Error() + "time")
-					return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrRequireParameter.Error()+"time")
-				}
-				for _, t := range dt.Time {
-					for lj, ts := range slot.TimeSlot {
-						ti, err := util.CheckStringData(t, "time")
-						if err != nil {
-							log.Println(err)
-							return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
-						}
-						log.Println("time:", ti)
-						if ts.Time == t {
-							if ts.Status == true {
-								log.Println("date time is used in this location")
-								return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "date time is used in this location")
-							}
-							location.Slot[li].TimeSlot[lj].Status = true
-							location.Slot[li].TimeSlot[lj].CourseId = &courseNew.Id
-							check = false
-							break
-						}
-					}
-					if check {
-						log.Println("time", dt.Time, "is in valid")
-						return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "time "+t+" is in valid")
-					}
-				}
-				checkDay = false
-				break
-			}
-		}
-		if checkDay {
-			log.Println("day", dt.Day, "is in valid")
-			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "day "+dt.Day+" is in valid")
-		}
-
-	}
-
-	// update value
-	courseNew.DateTime = req.DateTime
-
-	_, err = cc.courseRepo.Insert(courseNew)
-	if err != nil {
-		log.Println(err)
-		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
 	filter := bson.M{
@@ -249,6 +201,145 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 			profile.CourseTeachesList[i].CourseIdList = append(profile.CourseTeachesList[i].CourseIdList, courseNew.Id)
 			break
 		}
+	}
+
+	// check date time in class
+	for di, dt := range req.DateTime {
+		req.DateTime[di].Day, err = util.CheckStringData(dt.Day, "day")
+		if err != nil {
+			log.Println(err)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		dt.Day = req.DateTime[di].Day
+		log.Println("day:", dt.Day)
+		checkDay := true
+		for i, slot := range class.Slot {
+			if dt.Day == slot.Day {
+				check := true
+				if len(dt.Time) == 0 {
+					log.Println(util.ErrRequireParameter.Error() + "time")
+					return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrRequireParameter.Error()+"time")
+				}
+				for dti, t := range dt.Time {
+					for j, ts := range slot.TimeSlot {
+						req.DateTime[di].Time[dti], err = util.CheckStringData(t, "time")
+						if err != nil {
+							log.Println(err)
+							return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+						}
+						t = req.DateTime[di].Time[dti]
+						log.Println("time:", t)
+						if ts.Time == t {
+							if ts.Status == true {
+								log.Println("date time is used in class")
+								return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "date time is used in this class")
+							}
+							class.Slot[i].TimeSlot[j].Status = true
+							class.Slot[i].TimeSlot[j].CourseId = &courseNew.Id
+							check = false
+							break
+						}
+					}
+					if check {
+						log.Println("time", dt.Time, "is in valid")
+						return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "time "+t+" is in valid")
+					}
+				}
+				checkDay = false
+				break
+			}
+		}
+		if checkDay {
+			log.Println("day", dt.Day, "is in valid")
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "day "+dt.Day+" is in valid")
+		}
+	}
+
+	// check date time in profile teacher
+	for _, dt := range req.DateTime {
+		for i, slot := range profile.Slot {
+			if dt.Day == slot.Day {
+				for _, t := range dt.Time {
+					for j, ts := range slot.TimeSlot {
+						if ts.Time == t {
+							if ts.Status == true {
+								log.Println("date time is used in teacher time lot")
+								return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "date time is used in teacher time lot")
+							}
+							profile.Slot[i].TimeSlot[j].Status = true
+							profile.Slot[i].TimeSlot[j].CourseId = &courseNew.Id
+							break
+						}
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// check date time in location and set
+	for _, dt := range req.DateTime {
+		// day, err := util.CheckStringData(dt.Day, "day")
+		// if err != nil {
+		// 	log.Println(err)
+		// 	return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		// }
+		// log.Println("day:", day)
+		// checkDay := true
+		for i, slot := range location.Slot {
+			if dt.Day == slot.Day {
+				// check := true
+				// if len(dt.Time) == 0 {
+				// 	log.Println(util.ErrRequireParameter.Error() + "time")
+				// 	return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrRequireParameter.Error()+"time")
+				// }
+				for _, t := range dt.Time {
+					for j, ts := range slot.TimeSlot {
+						// ti, err := util.CheckStringData(t, "time")
+						// if err != nil {
+						// 	log.Println(err)
+						// 	return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+						// }
+						// log.Println("time:", ti)
+						if ts.Time == t {
+							if ts.Status == true {
+								log.Println("date time is used in this location")
+								return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "date time is used in this location")
+							}
+							location.Slot[i].TimeSlot[j].Status = true
+							location.Slot[i].TimeSlot[j].CourseId = &courseNew.Id
+							// check = false
+							break
+						}
+					}
+					// if check {
+					// 	log.Println("time", dt.Time, "is in valid")
+					// 	return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "time "+t+" is in valid")
+					// }
+				}
+				// checkDay = false
+				break
+			}
+		}
+		// if checkDay {
+		// 	log.Println("day", dt.Day, "is in valid")
+		// 	return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "day "+dt.Day+" is in valid")
+		// }
+	}
+
+	// update value
+	courseNew.DateTime = req.DateTime
+
+	_, err = cc.courseRepo.Insert(courseNew)
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	_, err = cc.classRepo.Update(class)
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
 	_, err = cc.profileRepo.Update(profile.Id, profile)
