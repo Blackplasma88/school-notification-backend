@@ -18,6 +18,7 @@ type ProfileRepository interface {
 	GetProfileByFilterForCheckExists(filter interface{}) (err error)
 	GetProfileById(filter interface{}, role string) (profile interface{}, err error)
 	GetAll(role string) (profiles []interface{}, err error)
+	GetProfileByFilterAll(filter interface{}, role string) (profiles []interface{}, err error)
 }
 
 type profileRepository struct {
@@ -112,4 +113,46 @@ func (p *profileRepository) GetProfileById(filter interface{}, role string) (pro
 	}
 
 	return profile, result.Err()
+}
+
+func (p *profileRepository) GetProfileByFilterAll(filter interface{}, role string) (profiles []interface{}, err error) {
+
+	cur, err := p.c.Find(p.ctx, filter, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if role == "teacher" {
+		for cur.Next(p.ctx) {
+			var b *models.ProfileTeacher
+			err := cur.Decode(&b)
+			if err != nil {
+				return nil, err
+			}
+
+			profiles = append(profiles, b)
+		}
+	} else if role == "student" {
+		for cur.Next(p.ctx) {
+			var b *models.ProfileStudent
+			err := cur.Decode(&b)
+			if err != nil {
+				return nil, err
+			}
+
+			profiles = append(profiles, b)
+		}
+	}
+
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	cur.Close(p.ctx)
+
+	if len(profiles) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+
+	return profiles, nil
 }

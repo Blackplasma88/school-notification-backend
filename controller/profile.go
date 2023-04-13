@@ -113,7 +113,7 @@ func (p *profileController) GetProfileTeacherByCategory(c *fiber.Ctx) error {
 		"role":     "teacher",
 	}
 
-	profile, err := p.profileRepo.GetProfileById(filter, "teacher")
+	profiles, err := p.profileRepo.GetProfileByFilterAll(filter, "teacher")
 	if err != nil {
 		log.Println(err)
 		if err.Error() == "mongo: no documents in result" {
@@ -125,13 +125,13 @@ func (p *profileController) GetProfileTeacherByCategory(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
-	if profile == nil {
-		log.Println("Profile not found")
+	if len(profiles) == 0 {
+		log.Println("profile not found")
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
 	}
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
-		"profile": profile,
+		"profile_list": profiles,
 	})
 }
 

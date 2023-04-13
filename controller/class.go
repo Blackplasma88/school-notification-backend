@@ -21,6 +21,7 @@ type ClassController interface {
 	// GetClassAll(c *fiber.Ctx) error
 	GetClassAllByClassYear(c *fiber.Ctx) error
 	GetClassById(c *fiber.Ctx) error
+	GetClassByClassYearAndRoom(c *fiber.Ctx) error
 	SetAdvisor(c *fiber.Ctx) error
 }
 
@@ -120,6 +121,44 @@ func (cl *classController) GetClassById(c *fiber.Ctx) error {
 	log.Println("find class id:", id)
 
 	class, err := cl.classRepo.GetClassById(id)
+	if err != nil {
+		log.Println(err)
+		if err.Error() == "mongo: no documents in result" {
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		}
+		if err.Error() == "Id is not primitive objectID" {
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	if class == nil {
+		log.Println("class not found")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"class": class,
+	})
+}
+
+func (cl *classController) GetClassByClassYearAndRoom(c *fiber.Ctx) error {
+
+	classYear, err := util.CheckStringData(c.Query("class_year"), "class_year")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("find class year:", classYear)
+
+	classRoom, err := util.CheckStringData(c.Query("class_room"), "class_room")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("find class room:", classRoom)
+
+	class, err := cl.classRepo.GetClassByFilter(bson.M{"class_year": classYear, "class_room": classRoom, "status": false})
 	if err != nil {
 		log.Println(err)
 		if err.Error() == "mongo: no documents in result" {
