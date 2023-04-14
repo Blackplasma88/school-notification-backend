@@ -17,7 +17,7 @@ func NewClassRoute(classController controller.ClassController) Routes {
 func (r *classRoutes) Install(app *fiber.App) {
 	app.Get("/class/all", r.classController.GetClassAllByClassYear)
 	app.Get("/class/class-year-and-room", r.classController.GetClassByClassYearAndRoom)
-	// app.Get("/class-id", r.classController.GetClassById)
+	app.Get("/class/id", r.classController.GetClassById)
 
 	app.Post("/class/create", r.classController.CreateClass)
 	app.Post("/class/set-advisor", r.classController.SetAdvisor)

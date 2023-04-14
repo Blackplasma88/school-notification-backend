@@ -16,7 +16,7 @@ func NewCourseRoute(courseController controller.CourseController) Routes {
 
 func (r *courseRoutes) Install(app *fiber.App) {
 	app.Get("/course/year-term", r.courseController.GetCourseByYearAndTerm)
-	// app.Get("/course-id", r.courseController.GetCoursesById)
+	app.Get("/course/id", r.courseController.GetCourseById)
 	// app.Get("/course/score", r.courseController.GetScoreById)
 	// app.Get("/course/check-name", r.courseController.GetCheckNameById)
 

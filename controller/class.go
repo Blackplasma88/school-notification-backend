@@ -113,7 +113,7 @@ func (cl *classController) GetClassAllByClassYear(c *fiber.Ctx) error {
 
 func (cl *classController) GetClassById(c *fiber.Ctx) error {
 
-	id, err := util.CheckStringData(c.Query("id"), "id")
+	id, err := util.CheckStringData(c.Query("class_id"), "class_id")
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())

@@ -210,7 +210,7 @@ func (l *locationController) GetLocationAll(c *fiber.Ctx) error {
 }
 
 func (l *locationController) GetLocationById(c *fiber.Ctx) error {
-	id, err := util.CheckStringData(c.Query("subject_id"), "subject_id")
+	id, err := util.CheckStringData(c.Query("location_id"), "location_id")
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())

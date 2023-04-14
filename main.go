@@ -18,8 +18,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// ยังไม่ได้เช็ค instructor id in subject
-// end term in school data
 func init() {
 	// load env
 	err := godotenv.Load(".env")
@@ -92,6 +90,11 @@ func main() {
 	schoolDataController := controller.NewSchoolDataController(schoolDataRepository, courseRepository, courseSummaryRepository, profileRepository, classRepository, locationRepository)
 	schoolDataRoutes := routes.NewSchoolDataRoute(schoolDataController)
 
+	// auth
+	userRepository := repository.NewUsersRepository(conn)
+	authController := controller.NewAuthController(userRepository, profileRepository)
+	authRoutes := routes.NewAuthRoutes(authController)
+
 	staticRoutes := routes.NewStaticRoutes()
 
 	initFirstData(profileRepository)
@@ -110,6 +113,7 @@ func main() {
 	scoreRoutes.Install(route)
 	checkNameRoutes.Install(route)
 	courseSummaryRoutes.Install(route)
+	authRoutes.Install(route)
 	staticRoutes.Install(route)
 
 	route.Listen(":" + os.Getenv("APP_PORT"))

@@ -16,7 +16,7 @@ func NewLocationRoute(locationController controller.LocationController) Routes {
 
 func (r *locationRoutes) Install(app *fiber.App) {
 	app.Get("/location/all", r.locationController.GetLocationAll)
-	// app.Get("/location/id", r.locationController.GetLocationById)
+	app.Get("/location/id", r.locationController.GetLocationById)
 
 	app.Post("/location/create", r.locationController.CreateLocation)
 	// app.Post("/location/update", r.locationController.UpdateLocationData)

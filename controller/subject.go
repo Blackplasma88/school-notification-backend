@@ -325,6 +325,11 @@ func (s *subjectController) AddInstructor(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
+	if len(subject.InstructorId) == 3 {
+		log.Println("this subject is fully")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "this subject is fully")
+	}
+
 	instructorId, err := util.CheckStringData(req.InstructorId, "instructor_id")
 	if err != nil {
 		log.Println(err)

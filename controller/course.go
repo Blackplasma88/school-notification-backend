@@ -19,6 +19,7 @@ type CourseController interface {
 	ChangeCourseStatus(c *fiber.Ctx) error
 	GetCourseByYearAndTerm(c *fiber.Ctx) error
 	FinishCourse(c *fiber.Ctx) error
+	GetCourseById(c *fiber.Ctx) error
 }
 
 type courseController struct {
@@ -121,6 +122,11 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
 		}
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	if class.Status == true {
+		log.Println("class did finish")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "class did finish")
 	}
 
 	locationId, err := util.CheckStringData(req.LocationId, "location_id")
@@ -672,6 +678,36 @@ func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
 		"profile_id":  profileId,
 		"role":        role,
 		"course_list": coursesRes,
+	})
+}
+
+func (cc *courseController) GetCourseById(c *fiber.Ctx) error {
+	id, err := util.CheckStringData(c.Query("course_id"), "course_id")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("find course id:", id)
+
+	course, err := cc.courseRepo.GetCourseById(id)
+	if err != nil {
+		log.Println(err)
+		if err.Error() == "mongo: no documents in result" {
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		}
+		if err.Error() == "Id is not primitive objectID" {
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	if course == nil {
+		log.Println("course not found")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"course": course,
 	})
 }
 

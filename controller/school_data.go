@@ -534,6 +534,8 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 			}
 		}
 
+		class.Slot = createTimeSlot()
+
 		_, err = s.classRepo.Update(class)
 		if err != nil {
 			log.Println(err)
@@ -609,6 +611,8 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 		if check {
 			continue
 		}
+
+		profileTeacher.Slot = createTimeSlot()
 
 		profileTeacher.CourseTeachesList = append(profileTeacher.CourseTeachesList, models.CourseTeachesList{
 			Year: *dataNew.Year,

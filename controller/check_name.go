@@ -82,6 +82,26 @@ func (cn *checkNameController) AddDateForCheck(c *fiber.Ctx) error {
 	}
 	log.Println("check name time late:", timeLate)
 
+	tDate, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	weekDay := strings.ToLower(tDate.Weekday().String())
+	log.Println(weekDay)
+
+	checkDay := true
+	for _, dt := range course.DateTime {
+		if dt.Day == weekDay {
+			checkDay = false
+			break
+		}
+	}
+	if checkDay {
+		log.Println("day not found in course")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "day not found in course")
+	}
+
 	_, err = cn.checkNameRepository.GetByFilter(bson.M{"course_id": courseId, "date": date})
 	if err == nil {
 		log.Println("check name date already exists")
