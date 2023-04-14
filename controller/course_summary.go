@@ -193,13 +193,19 @@ func (cs *courseSummaryController) SummaryCourse(c *fiber.Ctx) error {
 			for _, sData := range s.ScoreInformation {
 				if sData.StudentId == studentId {
 					if s.Type == "work" {
-						scoreWorkGet += sData.ScoreGet
+						if sData.ScoreGet != nil {
+							scoreWorkGet += *sData.ScoreGet
+						}
 						break
 					} else if s.Type == "midterm" {
-						scoreMidGet += sData.ScoreGet
+						if sData.ScoreGet != nil {
+							scoreMidGet += *sData.ScoreGet
+						}
 						break
 					} else if s.Type == "final" {
-						scoreFinalGet += sData.ScoreGet
+						if sData.ScoreGet != nil {
+							scoreFinalGet += *sData.ScoreGet
+						}
 						break
 					} else {
 						log.Println(util.ErrTypeInvalid)

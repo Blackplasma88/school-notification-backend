@@ -2,6 +2,7 @@ package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
+// attend , absent , leave , late
 type CheckName struct {
 	Id            primitive.ObjectID `json:"id" bson:"_id"`
 	CreatedAt     string             `json:"created_at" bson:"created_at"`
@@ -15,7 +16,7 @@ type CheckName struct {
 
 type CheckNameData struct {
 	StudentId string  `json:"student_id" bson:"student_id"`
-	CreatedAt string  `json:"created_at" bson:"created_at"`
+	UpdatedAt string  `json:"updated_at" bson:"updated_at"`
 	Time      string  `json:"time" bson:"time"`
 	Status    string  `json:"status" bson:"status"`
 	CheckBy   string  `json:"check_by" bson:"check_by"`
@@ -43,7 +44,7 @@ type CheckNameTeacherRes struct {
 
 type CheckNameStudentRes struct {
 	Date      string `json:"date"`
-	CreatedAt string `json:"created_at" bson:"created_at"`
+	UpdatedAt string `json:"updated_at" bson:"updated_at"`
 	Time      string `json:"time" bson:"time"`
 	Status    string `json:"status" bson:"status"`
 	CheckBy   string `json:"check_by" bson:"check_by"`

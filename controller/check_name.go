@@ -114,13 +114,14 @@ func (cn *checkNameController) AddDateForCheck(c *fiber.Ctx) error {
 
 	t := time.Now()
 	checkNameNew := &models.CheckName{
-		Id:        primitive.NewObjectID(),
-		CreatedAt: t.Format(time.RFC3339),
-		UpdatedAt: t.Format(time.RFC3339),
-		CourseId:  course.Id.Hex(),
-		Date:      date,
-		TimeLate:  t.Add(time.Minute * time.Duration(timeLate)).Format(time.RFC3339),
-		Status:    "progress",
+		Id:            primitive.NewObjectID(),
+		CreatedAt:     t.Format(time.RFC3339),
+		UpdatedAt:     t.Format(time.RFC3339),
+		CourseId:      course.Id.Hex(),
+		Date:          date,
+		TimeLate:      t.Add(time.Minute * time.Duration(timeLate)).Format(time.RFC3339),
+		Status:        "progress",
+		CheckNameData: createCheckNameData(course.StudentIdList, t.Format(time.RFC3339)),
 	}
 
 	result, err := cn.checkNameRepository.Insert(checkNameNew)
@@ -205,7 +206,7 @@ func (cn *checkNameController) GetDateByCourseId(c *fiber.Ctx) error {
 					// data.CheckBy = check.CheckBy
 					checkNameListRes = append(checkNameListRes, models.CheckNameStudentRes{
 						Date:      v.Date,
-						CreatedAt: check.CreatedAt,
+						UpdatedAt: check.UpdatedAt,
 						Time:      check.Time,
 						Status:    check.Status,
 						CheckBy:   check.CheckBy,
@@ -314,34 +315,26 @@ func (cn *checkNameController) CheckNameStudent(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "student id not found in course")
 	}
 
-	for _, v := range chcekName.CheckNameData {
+	t := time.Now()
+	for i, v := range chcekName.CheckNameData {
 		if v.StudentId == studentId {
-			log.Println("student id", util.ErrValueAlreadyExists)
-			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "student id"+util.ErrValueAlreadyExists.Error())
+			chcekName.CheckNameData[i].UpdatedAt = t.Format(time.RFC3339)
+			chcekName.CheckNameData[i].Time = strings.Split(strings.Split(t.Format(time.RFC3339), "T")[1], "+")[0]
+			chcekName.CheckNameData[i].CheckBy = checkBy
+
+			tl, err := time.Parse(time.RFC3339, chcekName.TimeLate)
+			if err != nil {
+				log.Println(err)
+				return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, err.Error())
+			}
+
+			if !(t.After(tl)) {
+				chcekName.CheckNameData[i].Status = "attend"
+			} else {
+				chcekName.CheckNameData[i].Status = "late"
+			}
 		}
 	}
-
-	t := time.Now()
-	checkNameStudent := models.CheckNameData{
-		StudentId: studentId,
-		CreatedAt: t.Format(time.RFC3339),
-		Time:      strings.Split(strings.Split(t.Format(time.RFC3339), "T")[1], "+")[0],
-		CheckBy:   checkBy,
-	}
-
-	tl, err := time.Parse(time.RFC3339, chcekName.TimeLate)
-	if err != nil {
-		log.Println(err)
-		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, err.Error())
-	}
-
-	if !(t.After(tl)) {
-		checkNameStudent.Status = "attend"
-	} else {
-		checkNameStudent.Status = "late"
-	}
-
-	chcekName.CheckNameData = append(chcekName.CheckNameData, checkNameStudent)
 
 	result, err := cn.checkNameRepository.Update(chcekName)
 	if err != nil {
@@ -469,24 +462,30 @@ func (cn *checkNameController) EndDateCheckName(c *fiber.Ctx) error {
 	}
 
 	t := time.Now()
-	for _, v := range course.StudentIdList {
-		check := true
-		for _, d := range chcekName.CheckNameData {
-			if v == d.StudentId {
-				check = false
-				break
-			}
+	// for _, v := range course.StudentIdList {
+	// 	check := true
+	for i, d := range chcekName.CheckNameData {
+		if d.Status == "" {
+			chcekName.CheckNameData[i].UpdatedAt = t.Format(time.RFC3339)
+			chcekName.CheckNameData[i].Time = strings.Split(strings.Split(t.Format(time.RFC3339), "T")[1], "+")[0]
+			chcekName.CheckNameData[i].Status = "absent"
+			chcekName.CheckNameData[i].CheckBy = "server"
 		}
-		if check {
-			chcekName.CheckNameData = append(chcekName.CheckNameData, models.CheckNameData{
-				StudentId: v,
-				CreatedAt: t.Format(time.RFC3339),
-				Time:      strings.Split(strings.Split(t.Format(time.RFC3339), "T")[1], "+")[0],
-				Status:    "absent",
-				CheckBy:   "server",
-			})
-		}
+		// if v == d.StudentId {
+		// 	check = false
+		// 	break
+		// }
 	}
+	// if check {
+	// 	chcekName.CheckNameData = append(chcekName.CheckNameData, models.CheckNameData{
+	// 		StudentId: v,
+	// 		UpdatedAt: t.Format(time.RFC3339),
+	// 		Time:      strings.Split(strings.Split(t.Format(time.RFC3339), "T")[1], "+")[0],
+	// 		Status:    "absent",
+	// 		CheckBy:   "server",
+	// 	})
+	// }
+	// }
 
 	chcekName.Status = "end"
 
@@ -500,4 +499,17 @@ func (cn *checkNameController) EndDateCheckName(c *fiber.Ctx) error {
 		"check_name_id": chcekName.Id,
 		"update_count":  result.ModifiedCount,
 	})
+}
+
+func createCheckNameData(studentIdList []string, t string) []models.CheckNameData {
+
+	var res []models.CheckNameData
+	for _, s := range studentIdList {
+		res = append(res, models.CheckNameData{
+			StudentId: s,
+			UpdatedAt: t,
+		})
+	}
+
+	return res
 }

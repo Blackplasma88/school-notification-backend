@@ -14,11 +14,11 @@ type Score struct {
 }
 
 type ScoreInformation struct {
-	StudentId string  `json:"student_id" bson:"student_id"`
-	UpdatedAt string  `json:"updated_at" bson:"updated_at"`
-	ScoreGet  float64 `json:"score_get" bson:"score_get"`
-	Status    string  `json:"status" bson:"status"`
-	Note      *string `json:"note" bson:"note"`
+	StudentId string   `json:"student_id" bson:"student_id"`
+	UpdatedAt string   `json:"updated_at" bson:"updated_at"`
+	ScoreGet  *float64 `json:"score_get,omitempty" bson:"score_get,omitempty"`
+	Status    string   `json:"status" bson:"status"`
+	Note      *string  `json:"note,omitempty" bson:"note,omitempty"`
 }
 
 type ScoreRequest struct {
@@ -36,9 +36,9 @@ type ScoreTeacherRes struct {
 }
 
 type ScoreStudentRes struct {
-	Name      string  `json:"name" bson:"name"`
-	UpdatedAt string  `json:"updated_at" bson:"updated_at"`
-	ScoreFull float64 `json:"score_full" bson:"score_full"`
-	ScoreGet  float64 `json:"score_get" bson:"score_get"`
-	Status    string  `json:"status" bson:"status"`
+	Name      string   `json:"name" bson:"name"`
+	UpdatedAt string   `json:"updated_at" bson:"updated_at"`
+	ScoreFull float64  `json:"score_full" bson:"score_full"`
+	ScoreGet  *float64 `json:"score_get" bson:"score_get"`
+	Status    string   `json:"status" bson:"status"`
 }

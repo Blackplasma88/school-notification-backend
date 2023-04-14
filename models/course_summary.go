@@ -10,7 +10,6 @@ type CourseSummary struct {
 	StudentData []StudentData      `json:"student_data" bson:"student_data"`
 }
 
-// attend , absend , leave , late
 type StudentData struct {
 	StudentId     string  `json:"student_id" bson:"student_id"`
 	ScoreWorkGet  float64 `json:"score_work_get" bson:"score_work_get"`
