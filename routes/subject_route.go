@@ -16,6 +16,7 @@ func NewSubjectRoute(subjectController controller.SubjectController) Routes {
 
 func (r *subjectRoutes) Install(app *fiber.App) {
 	app.Get("/subject/all", r.subjectController.GetSubjectAll)
+	app.Get("/subject/category", r.subjectController.GetSubjectByCategory)
 	// app.Get("/subject/id", r.subjectController.GetSubjectById)
 
 	app.Post("/subject/create", r.subjectController.CreateSubject)

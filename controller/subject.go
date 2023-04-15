@@ -20,6 +20,7 @@ type SubjectController interface {
 	GetSubjectAll(c *fiber.Ctx) error
 	GetSubjectById(c *fiber.Ctx) error
 	AddInstructor(c *fiber.Ctx) error
+	GetSubjectByCategory(c *fiber.Ctx) error
 }
 
 type subjectController struct {
@@ -289,6 +290,36 @@ func (s *subjectController) GetSubjectById(c *fiber.Ctx) error {
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
 		"subject": subject,
+	})
+}
+
+func (s *subjectController) GetSubjectByCategory(c *fiber.Ctx) error {
+	category, err := util.CheckStringData(c.Query("category"), "category")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("find subject category:", category)
+
+	subjects, err := s.subjectRepository.GetSubjectByFilterAll(bson.M{"category": category})
+	if err != nil {
+		log.Println(err)
+		if err.Error() == "mongo: no documents in result" {
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		}
+		if err.Error() == "Id is not primitive objectID" {
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	if len(subjects) == 0 {
+		log.Println("Subject not found")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"subject_list": subjects,
 	})
 }
 

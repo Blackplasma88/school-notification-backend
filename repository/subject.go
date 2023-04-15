@@ -19,6 +19,7 @@ type SubjectRepository interface {
 	GetSubjectById(id string) (subject *models.Subject, err error)
 	GetSubjectByFilter(filter interface{}) (subject *models.Subject, err error)
 	Update(subject *models.Subject) (*mongo.UpdateResult, error)
+	GetSubjectByFilterAll(filter interface{}) (subjects []*models.Subject, err error)
 }
 
 type subjectRepository struct {
@@ -48,6 +49,36 @@ func (s *subjectRepository) GetSubjectByFilter(filter interface{}) (subject *mod
 	}
 
 	return subject, result.Err()
+}
+
+func (s *subjectRepository) GetSubjectByFilterAll(filter interface{}) (subjects []*models.Subject, err error) {
+
+	cur, err := s.c.Find(s.ctx, filter, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for cur.Next(s.ctx) {
+		var b *models.Subject
+		err := cur.Decode(&b)
+		if err != nil {
+			return nil, err
+		}
+
+		subjects = append(subjects, b)
+	}
+
+	if err := cur.Err(); err != nil {
+		return nil, err
+	}
+
+	cur.Close(s.ctx)
+
+	if len(subjects) == 0 {
+		return nil, mongo.ErrNoDocuments
+	}
+
+	return subjects, nil
 }
 
 func (s *subjectRepository) GetSubjectById(id string) (subject *models.Subject, err error) {
