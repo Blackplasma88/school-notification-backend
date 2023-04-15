@@ -23,6 +23,7 @@ type SchoolDataController interface {
 	GetSchoolDataAll(c *fiber.Ctx) error
 	GetSubjectCategory(c *fiber.Ctx) error
 	GetSchoolDataById(c *fiber.Ctx) error
+	GetTermYear(c *fiber.Ctx) error
 	EndTerm(c *fiber.Ctx) error
 }
 
@@ -259,6 +260,27 @@ func (s *schoolDataController) GetSubjectCategory(c *fiber.Ctx) error {
 	})
 }
 
+func (s *schoolDataController) GetTermYear(c *fiber.Ctx) error {
+
+	data, err := s.schoolDataRepository.GetByFilterAll(bson.M{"type": "YearAndTerm"})
+	if err != nil {
+		log.Println(err)
+		if err == mongo.ErrNoDocuments {
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		}
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	if len(data) == 0 {
+		log.Println("data not found")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"school_data": data,
+	})
+}
+
 func (s *schoolDataController) GetSchoolDataById(c *fiber.Ctx) error {
 	id, err := util.CheckStringData(c.Query("id"), "id")
 	if err != nil {
@@ -339,7 +361,7 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 	for _, v := range courseList {
 		if v.Status != "summary" && v.Status != "finish" {
 			log.Println("have course does not finish")
-			return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, "have course does not finish")
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "have course does not finish")
 		}
 	}
 

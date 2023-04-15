@@ -398,7 +398,7 @@ func (cn *checkNameController) GetCheckNameDataByCourseIdAndDate(c *fiber.Ctx) e
 	}
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
-		"data_list": dataRes,
+		"date_data": dataRes,
 	})
 }
 

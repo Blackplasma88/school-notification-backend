@@ -17,7 +17,7 @@ func NewSchoolDataRoute(schoolDataController controller.SchoolDataController) Ro
 func (r *schoolDataRoutes) Install(app *fiber.App) {
 	// app.Get("/school-data/all", r.schoolDataController.)
 	app.Get("/school-data/subject-category", r.schoolDataController.GetSubjectCategory)
-	// app.Get("/school-data/term-year-data", r.schoolDataController.GetSubjectCategory)
+	app.Get("/school-data/term-year-data", r.schoolDataController.GetTermYear)
 	// app.Get("/school-data/id", r.schoolDataController.)
 
 	app.Post("/school-data/add-year-term", r.schoolDataController.AddYearAndTerm)

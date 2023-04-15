@@ -539,7 +539,7 @@ func (s *scoreController) GetScoreDataByCourseIdAndNameSore(c *fiber.Ctx) error 
 	}
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
-		"data_list": scoreRes,
+		"score_data": scoreRes,
 	})
 }
 
