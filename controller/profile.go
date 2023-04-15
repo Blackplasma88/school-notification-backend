@@ -17,9 +17,10 @@ import (
 
 type ProfileController interface {
 	CreateNewProfile(c *fiber.Ctx) error
-	GetProfileById(c *fiber.Ctx) error
+	GetProfileByProfileId(c *fiber.Ctx) error
 	GetProfileAll(c *fiber.Ctx) error
 	GetProfileTeacherByCategory(c *fiber.Ctx) error
+	GetProfileById(c *fiber.Ctx) error
 }
 
 type profileController struct {
@@ -56,14 +57,14 @@ func (p *profileController) GetProfileAll(c *fiber.Ctx) error {
 	})
 }
 
-func (p *profileController) GetProfileById(c *fiber.Ctx) error {
+func (p *profileController) GetProfileByProfileId(c *fiber.Ctx) error {
 
-	id, err := util.CheckStringData(c.Query("id"), "id")
+	profileId, err := util.CheckStringData(c.Query("profile_id"), "profile_id")
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
 	}
-	log.Println("find profile id is:", id)
+	log.Println("find profile id is:", profileId)
 
 	role, err := util.CheckStringData(c.Query("role"), "role")
 	if err != nil {
@@ -73,11 +74,42 @@ func (p *profileController) GetProfileById(c *fiber.Ctx) error {
 	log.Println("find profile role is:", role)
 
 	filter := bson.M{
-		"profile_id": id,
+		"profile_id": profileId,
 		"role":       role,
 	}
 
 	profile, err := p.profileRepo.GetProfileById(filter, role)
+	if err != nil {
+		log.Println(err)
+		if err.Error() == "mongo: no documents in result" {
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		}
+		if err.Error() == "Id is not primitive objectID" {
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	if profile == nil {
+		log.Println("Profile not found")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"profile": profile,
+	})
+}
+
+func (p *profileController) GetProfileById(c *fiber.Ctx) error {
+
+	id, err := util.CheckStringData(c.Query("id"), "id")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("find id is:", id)
+
+	profile, err := p.profileRepo.GetProfileByIdHex(id)
 	if err != nil {
 		log.Println(err)
 		if err.Error() == "mongo: no documents in result" {

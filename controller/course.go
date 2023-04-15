@@ -50,7 +50,7 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusUnprocessableEntity, err.Error())
 	}
 
-	dataList, err := cc.schoolDataRepository.GetAll()
+	dataList, err := cc.schoolDataRepository.GetByFilterAll(bson.M{"type": "YearAndTerm"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
@@ -60,7 +60,7 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 		return dataList[i].CreatedAt > dataList[j].CreatedAt
 	})
 
-	if *dataList[0].Status == true {
+	if *dataList[len(dataList)-1].Status == true {
 		log.Println("school data invalid")
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, "school data invalid")
 	}

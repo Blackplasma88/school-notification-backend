@@ -18,6 +18,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// check create converation by user again
+
 func init() {
 	// load env
 	err := godotenv.Load(".env")
@@ -95,6 +97,16 @@ func main() {
 	authController := controller.NewAuthController(userRepository, profileRepository)
 	authRoutes := routes.NewAuthRoutes(authController)
 
+	// conversation
+	conversationRepository := repository.NewConversationRepository(conn)
+	conversationController := controller.NewConversationController(conversationRepository, profileRepository)
+	conversationRoutes := routes.NewConversationRoute(conversationController)
+
+	// message
+	messageRepository := repository.NewMessageRepository(conn)
+	messageController := controller.NewMessageController(messageRepository, conversationRepository)
+	messageRoutes := routes.NewMessageRoute(messageController)
+
 	staticRoutes := routes.NewStaticRoutes()
 
 	initFirstData(profileRepository)
@@ -114,6 +126,8 @@ func main() {
 	checkNameRoutes.Install(route)
 	courseSummaryRoutes.Install(route)
 	authRoutes.Install(route)
+	conversationRoutes.Install(route)
+	messageRoutes.Install(route)
 	staticRoutes.Install(route)
 
 	route.Listen(":" + os.Getenv("APP_PORT"))

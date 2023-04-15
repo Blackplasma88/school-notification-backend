@@ -4,6 +4,7 @@ import (
 	"context"
 	"school-notification-backend/db"
 	"school-notification-backend/models"
+	"school-notification-backend/util"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,6 +20,7 @@ type ProfileRepository interface {
 	GetProfileById(filter interface{}, role string) (profile interface{}, err error)
 	GetAll(role string) (profiles []interface{}, err error)
 	GetProfileByFilterAll(filter interface{}, role string) (profiles []interface{}, err error)
+	GetProfileByIdHex(id string) (profile *models.ProfileForChat, err error)
 }
 
 type profileRepository struct {
@@ -110,6 +112,27 @@ func (p *profileRepository) GetProfileById(filter interface{}, role string) (pro
 			return nil, err
 		}
 		profile = p
+	}
+
+	return profile, result.Err()
+}
+
+func (p *profileRepository) GetProfileByIdHex(id string) (profile *models.ProfileForChat, err error) {
+
+	if ok := primitive.IsValidObjectID(id); ok == false {
+		return nil, util.ErrIdIsNotPrimitiveObjectID
+	}
+
+	oID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+
+	result := p.c.FindOne(p.ctx, bson.M{"_id": oID})
+
+	err = result.Decode(&profile)
+	if err != nil {
+		return nil, err
 	}
 
 	return profile, result.Err()

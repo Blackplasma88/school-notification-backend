@@ -91,3 +91,9 @@ type ProfileRequest struct {
 	CoursesId         string `json:"courses_id" bson:"courses_id"`
 	Category          string `json:"category" bson:"category"`
 }
+
+type ProfileForChat struct {
+	Id   primitive.ObjectID `json:"id" bson:"_id"`
+	Name string             `json:"name" bson:"name"`
+	Role string             `json:"role" bson:"role"`
+}
