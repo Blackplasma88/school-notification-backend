@@ -4,6 +4,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 	"time"
 
@@ -24,16 +25,22 @@ type ScoreController interface {
 type scoreController struct {
 	scoreRepository repository.ScoreRepository
 	courseRepo      repository.CourseRepository
+	userRepo        repository.UsersRepository
 }
 
-func NewScoreController(scoreRepository repository.ScoreRepository, courseRepo repository.CourseRepository) ScoreController {
-	return &scoreController{scoreRepository: scoreRepository, courseRepo: courseRepo}
+func NewScoreController(scoreRepository repository.ScoreRepository, courseRepo repository.CourseRepository, userRepo repository.UsersRepository) ScoreController {
+	return &scoreController{scoreRepository: scoreRepository, courseRepo: courseRepo, userRepo: userRepo}
 }
 
 func (s *scoreController) CreateScore(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin", "teacher"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.ScoreRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -138,9 +145,14 @@ func (s *scoreController) CreateScore(c *fiber.Ctx) error {
 }
 
 func (s *scoreController) UpdateStudentScore(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin", "teacher"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.ScoreRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)

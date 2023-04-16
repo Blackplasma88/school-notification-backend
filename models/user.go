@@ -7,6 +7,7 @@ type User struct {
 	Username  string             `json:"username" bson:"username"`
 	Password  string             `json:"password" bson:"password"`
 	CreatedAt string             `json:"created_at" bson:"created_at"`
+	UserId    string             `json:"user_id" bson:"user_id"`
 	ProfileId string             `json:"profile_id" bson:"profile_id"`
 	Role      string             `json:"role" bson:"role"`
 }
@@ -14,6 +15,7 @@ type User struct {
 type UserRequest struct {
 	Username  string `json:"username" bson:"username"`
 	Password  string `json:"password" bson:"password"`
+	UserId    string `json:"user_id" bson:"user_id"`
 	ProfileId string `json:"profile_id" bson:"profile_id"`
 	Role      string `json:"role" bson:"role"`
 }

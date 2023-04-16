@@ -4,6 +4,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 	"time"
 
@@ -23,10 +24,11 @@ type courseSummaryController struct {
 	courseRepo          repository.CourseRepository
 	scoreRepository     repository.ScoreRepository
 	checkNameRepository repository.CheckNameRepository
+	userRepo            repository.UsersRepository
 }
 
-func NewCourseSummaryController(courseSummaryRepo repository.CourseSummaryRepository, courseRepo repository.CourseRepository, scoreRepository repository.ScoreRepository, checkNameRepository repository.CheckNameRepository) CourseSummaryController {
-	return &courseSummaryController{courseSummaryRepo: courseSummaryRepo, courseRepo: courseRepo, scoreRepository: scoreRepository, checkNameRepository: checkNameRepository}
+func NewCourseSummaryController(courseSummaryRepo repository.CourseSummaryRepository, courseRepo repository.CourseRepository, scoreRepository repository.ScoreRepository, checkNameRepository repository.CheckNameRepository, userRepo repository.UsersRepository) CourseSummaryController {
+	return &courseSummaryController{courseSummaryRepo: courseSummaryRepo, courseRepo: courseRepo, scoreRepository: scoreRepository, checkNameRepository: checkNameRepository, userRepo: userRepo}
 }
 
 func (cs *courseSummaryController) GetSummaryCourse(c *fiber.Ctx) error {
@@ -89,9 +91,14 @@ func (cs *courseSummaryController) GetSummaryCourse(c *fiber.Ctx) error {
 }
 
 func (cs *courseSummaryController) SummaryCourse(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cs.userRepo, []string{"admin", "teacher"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.CourseSummaryRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -113,7 +120,7 @@ func (cs *courseSummaryController) SummaryCourse(c *fiber.Ctx) error {
 	if err != nil {
 		log.Println(err)
 		if err.Error() == "mongo: no documents in result" {
-			return util.ResponseNotSuccess(c, fiber.StatusNotFound, "subject_id "+util.ErrNotFound.Error())
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, "course_id "+util.ErrNotFound.Error())
 		}
 		if err.Error() == "Id is not primitive objectID" {
 			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())

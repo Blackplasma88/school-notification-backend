@@ -42,10 +42,11 @@ func main() {
 
 	// school data
 	schoolDataRepository := repository.NewSchoolDataRepository(conn)
+	userRepository := repository.NewUsersRepository(conn)
 
 	// information
 	informationRepository := repository.NewInformationRepository(conn)
-	informationController := controller.NewInformationController(informationRepository)
+	informationController := controller.NewInformationController(informationRepository, userRepository)
 	informationRoutes := routes.NewInformationRoutes(informationController)
 
 	// class
@@ -53,47 +54,46 @@ func main() {
 
 	// location
 	locationRepository := repository.NewLocationRepository(conn)
-	locationController := controller.NewLocationController(locationRepository)
+	locationController := controller.NewLocationController(locationRepository, userRepository)
 	locationRoutes := routes.NewLocationRoute(locationController)
 
 	// profile
 	profileRepository := repository.NewProfileRepository(conn)
-	profileController := controller.NewProfileController(profileRepository, classRepository, schoolDataRepository)
+	profileController := controller.NewProfileController(profileRepository, classRepository, schoolDataRepository, userRepository)
 	profileRoutes := routes.NewProfileRoute(profileController)
 
-	classController := controller.NewClassController(classRepository, schoolDataRepository, profileRepository)
+	classController := controller.NewClassController(classRepository, schoolDataRepository, profileRepository, userRepository)
 	classRoutes := routes.NewClassRoute(classController)
 
 	// subject
 	subjectRepository := repository.NewSubjectRepository(conn)
-	subjectController := controller.NewSubjectController(subjectRepository, schoolDataRepository, profileRepository)
+	subjectController := controller.NewSubjectController(subjectRepository, schoolDataRepository, profileRepository, userRepository)
 	subjectRoutes := routes.NewSubjectRoute(subjectController)
 
 	// course
 	courseRepository := repository.NewCoursesRepository(conn)
 	courseSummaryRepository := repository.NewCourseSummaryRepository(conn)
-	courseController := controller.NewCourseController(courseRepository, subjectRepository, schoolDataRepository, locationRepository, classRepository, profileRepository, courseSummaryRepository)
+	courseController := controller.NewCourseController(courseRepository, subjectRepository, schoolDataRepository, locationRepository, classRepository, profileRepository, courseSummaryRepository, userRepository)
 	courseRoutes := routes.NewCourseRoute(courseController)
 
 	// score
 	scoreRepository := repository.NewScoreRepository(conn)
-	scoreController := controller.NewScoreController(scoreRepository, courseRepository)
+	scoreController := controller.NewScoreController(scoreRepository, courseRepository, userRepository)
 	scoreRoutes := routes.NewScoreRoute(scoreController)
 
 	// check name
 	checkNameRepository := repository.NewCheckNameRepository(conn)
-	checkNameController := controller.NewCheckNameController(checkNameRepository, courseRepository)
+	checkNameController := controller.NewCheckNameController(checkNameRepository, courseRepository, userRepository)
 	checkNameRoutes := routes.NewCheckNameRoute(checkNameController)
 
 	// course summary
-	courseSummaryController := controller.NewCourseSummaryController(courseSummaryRepository, courseRepository, scoreRepository, checkNameRepository)
+	courseSummaryController := controller.NewCourseSummaryController(courseSummaryRepository, courseRepository, scoreRepository, checkNameRepository, userRepository)
 	courseSummaryRoutes := routes.NewCourseSummaryRoute(courseSummaryController)
 
-	schoolDataController := controller.NewSchoolDataController(schoolDataRepository, courseRepository, courseSummaryRepository, profileRepository, classRepository, locationRepository)
+	schoolDataController := controller.NewSchoolDataController(schoolDataRepository, courseRepository, courseSummaryRepository, profileRepository, classRepository, locationRepository, userRepository)
 	schoolDataRoutes := routes.NewSchoolDataRoute(schoolDataController)
 
 	// auth
-	userRepository := repository.NewUsersRepository(conn)
 	authController := controller.NewAuthController(userRepository, profileRepository)
 	authRoutes := routes.NewAuthRoutes(authController)
 
@@ -106,6 +106,10 @@ func main() {
 	messageRepository := repository.NewMessageRepository(conn)
 	messageController := controller.NewMessageController(messageRepository, conversationRepository)
 	messageRoutes := routes.NewMessageRoute(messageController)
+
+	faceDetectionRepository := repository.NewFaceDetectionRepository(conn)
+	faceDetectionController := controller.NewFaceDetectionController(faceDetectionRepository, classRepository, userRepository)
+	faceDetectionRoutes := routes.NewFaceDetectionRoute(faceDetectionController)
 
 	staticRoutes := routes.NewStaticRoutes()
 
@@ -128,6 +132,7 @@ func main() {
 	authRoutes.Install(route)
 	conversationRoutes.Install(route)
 	messageRoutes.Install(route)
+	faceDetectionRoutes.Install(route)
 	staticRoutes.Install(route)
 
 	route.Listen(":" + os.Getenv("APP_PORT"))

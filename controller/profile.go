@@ -5,6 +5,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 	"sort"
 	"time"
@@ -27,10 +28,11 @@ type profileController struct {
 	profileRepo          repository.ProfileRepository
 	classRepo            repository.ClassRepository
 	schoolDataRepository repository.SchoolDataRepository
+	userRepo             repository.UsersRepository
 }
 
-func NewProfileController(profileRepo repository.ProfileRepository, classRepo repository.ClassRepository, schoolDataRepository repository.SchoolDataRepository) ProfileController {
-	return &profileController{profileRepo: profileRepo, classRepo: classRepo, schoolDataRepository: schoolDataRepository}
+func NewProfileController(profileRepo repository.ProfileRepository, classRepo repository.ClassRepository, schoolDataRepository repository.SchoolDataRepository, userRepo repository.UsersRepository) ProfileController {
+	return &profileController{profileRepo: profileRepo, classRepo: classRepo, schoolDataRepository: schoolDataRepository, userRepo: userRepo}
 }
 
 func (p *profileController) GetProfileAll(c *fiber.Ctx) error {
@@ -168,9 +170,14 @@ func (p *profileController) GetProfileTeacherByCategory(c *fiber.Ctx) error {
 }
 
 func (p *profileController) CreateNewProfile(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], p.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.ProfileRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)

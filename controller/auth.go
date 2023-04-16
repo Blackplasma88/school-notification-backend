@@ -89,6 +89,13 @@ func (a *authController) SignUp(c *fiber.Ctx) error {
 	input.ProfileId = strings.TrimSpace(input.ProfileId)
 	log.Println("profile id:", input.ProfileId)
 
+	if len(strings.TrimSpace(input.UserId)) == 0 {
+		log.Println("do not have parameter user id")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrRequireParameter.Error()+"user_id")
+	}
+	input.UserId = strings.TrimSpace(input.UserId)
+	log.Println("user id:", input.UserId)
+
 	// err = a.profileRepo.GetProfileByFilterForCheckExists(bson.M{"profile_id": input.ProfileId, "role": input.Role})
 	// if err != nil {
 	// 	log.Println(err)
@@ -105,6 +112,7 @@ func (a *authController) SignUp(c *fiber.Ctx) error {
 		Password:  input.Password,
 		ProfileId: input.ProfileId,
 		Role:      input.Role,
+		UserId:    input.UserId,
 	}
 
 	result, err := a.userRepo.InsertUser(&user)
@@ -171,6 +179,7 @@ func (a *authController) SignIn(c *fiber.Ctx) error {
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "signin success", map[string]interface{}{
 		"token":      fmt.Sprintf("Bearer %s", tokenStr),
+		"user_id":    exists.UserId,
 		"profile_id": exists.ProfileId,
 		"role":       exists.Role,
 	})
@@ -187,13 +196,13 @@ func (a *authController) GetUserWithId(c *fiber.Ctx) error {
 
 	log.Println("payload Id:", payload.Id)
 
-	user, err := a.userRepo.GetById(payload.Id)
-	if err != nil {
-		log.Println(err)
-		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, err.Error())
-	}
+	// user, err := a.userRepo.GetById(payload.Id)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, err.Error())
+	// }
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
-		"user": user,
+		// "user": user,
 	})
 }

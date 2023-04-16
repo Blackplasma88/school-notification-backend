@@ -4,6 +4,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 	"sort"
 	"time"
@@ -30,16 +31,22 @@ type courseController struct {
 	classRepo            repository.ClassRepository
 	profileRepo          repository.ProfileRepository
 	courseSummaryRepo    repository.CourseSummaryRepository
+	userRepo             repository.UsersRepository
 }
 
-func NewCourseController(courseRepo repository.CourseRepository, subjectRepository repository.SubjectRepository, schoolDataRepository repository.SchoolDataRepository, locationRepo repository.LocationRepository, classRepo repository.ClassRepository, profileRepo repository.ProfileRepository, courseSummaryRepo repository.CourseSummaryRepository) CourseController {
-	return &courseController{courseRepo: courseRepo, subjectRepository: subjectRepository, schoolDataRepository: schoolDataRepository, locationRepo: locationRepo, classRepo: classRepo, profileRepo: profileRepo, courseSummaryRepo: courseSummaryRepo}
+func NewCourseController(courseRepo repository.CourseRepository, subjectRepository repository.SubjectRepository, schoolDataRepository repository.SchoolDataRepository, locationRepo repository.LocationRepository, classRepo repository.ClassRepository, profileRepo repository.ProfileRepository, courseSummaryRepo repository.CourseSummaryRepository, userRepo repository.UsersRepository) CourseController {
+	return &courseController{courseRepo: courseRepo, subjectRepository: subjectRepository, schoolDataRepository: schoolDataRepository, locationRepo: locationRepo, classRepo: classRepo, profileRepo: profileRepo, courseSummaryRepo: courseSummaryRepo, userRepo: userRepo}
 }
 
 func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.CourseRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -399,8 +406,14 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 }
 
 func (cc *courseController) ChangeCourseStatus(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"admin", "teacher"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	req := models.CourseRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -712,8 +725,13 @@ func (cc *courseController) GetCourseById(c *fiber.Ctx) error {
 }
 
 func (cc *courseController) FinishCourse(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 	req := models.CourseRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)

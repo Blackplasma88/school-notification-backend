@@ -18,6 +18,7 @@ type ConversationRepository interface {
 	Update(conversation *models.Conversation) (*mongo.UpdateResult, error)
 	GetConversationAllByFilter(filter interface{}) (conversations []*models.Conversation, err error)
 	GetConversationById(id string) (conversation *models.Conversation, err error)
+	GetByFilter(filter interface{}) (conversation *models.Conversation, err error)
 }
 
 type conversationRepository struct {
@@ -65,6 +66,18 @@ func (c *conversationRepository) GetConversationAllByFilter(filter interface{}) 
 	}
 
 	return conversations, nil
+}
+
+func (c *conversationRepository) GetByFilter(filter interface{}) (conversation *models.Conversation, err error) {
+
+	result := c.c.FindOne(c.ctx, filter)
+
+	err = result.Decode(&conversation)
+	if err != nil {
+		return nil, err
+	}
+
+	return conversation, result.Err()
 }
 
 func (c *conversationRepository) GetConversationById(id string) (conversation *models.Conversation, err error) {

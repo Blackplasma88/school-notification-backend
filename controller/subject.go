@@ -4,6 +4,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 
 	"time"
@@ -27,16 +28,22 @@ type subjectController struct {
 	subjectRepository    repository.SubjectRepository
 	schoolDataRepository repository.SchoolDataRepository
 	profileRepo          repository.ProfileRepository
+	userRepo             repository.UsersRepository
 }
 
-func NewSubjectController(subjectRepository repository.SubjectRepository, schoolDataRepository repository.SchoolDataRepository, profileRepo repository.ProfileRepository) SubjectController {
-	return &subjectController{subjectRepository: subjectRepository, schoolDataRepository: schoolDataRepository, profileRepo: profileRepo}
+func NewSubjectController(subjectRepository repository.SubjectRepository, schoolDataRepository repository.SchoolDataRepository, profileRepo repository.ProfileRepository, userRepo repository.UsersRepository) SubjectController {
+	return &subjectController{subjectRepository: subjectRepository, schoolDataRepository: schoolDataRepository, profileRepo: profileRepo, userRepo: userRepo}
 }
 
 func (s *subjectController) CreateSubject(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.SubjectRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -153,9 +160,14 @@ func (s *subjectController) CreateSubject(c *fiber.Ctx) error {
 }
 
 func (s *subjectController) UpdateSubject(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.SubjectRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)

@@ -4,6 +4,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 
 	"time"
@@ -23,15 +24,22 @@ type LocationController interface {
 
 type locationController struct {
 	locationRepo repository.LocationRepository
+	userRepo     repository.UsersRepository
 }
 
-func NewLocationController(locationRepo repository.LocationRepository) LocationController {
-	return &locationController{locationRepo: locationRepo}
+func NewLocationController(locationRepo repository.LocationRepository, userRepo repository.UsersRepository) LocationController {
+	return &locationController{locationRepo: locationRepo, userRepo: userRepo}
 }
 
 func (l *locationController) CreateLocation(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], l.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	req := models.LocationRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)

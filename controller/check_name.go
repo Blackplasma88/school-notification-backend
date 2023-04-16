@@ -4,6 +4,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 	"strings"
 	"time"
@@ -25,16 +26,22 @@ type CheckNameController interface {
 type checkNameController struct {
 	checkNameRepository repository.CheckNameRepository
 	courseRepo          repository.CourseRepository
+	userRepo            repository.UsersRepository
 }
 
-func NewCheckNameController(checkNameRepository repository.CheckNameRepository, courseRepo repository.CourseRepository) CheckNameController {
-	return &checkNameController{checkNameRepository: checkNameRepository, courseRepo: courseRepo}
+func NewCheckNameController(checkNameRepository repository.CheckNameRepository, courseRepo repository.CourseRepository, userRepo repository.UsersRepository) CheckNameController {
+	return &checkNameController{checkNameRepository: checkNameRepository, courseRepo: courseRepo, userRepo: userRepo}
 }
 
 func (cn *checkNameController) AddDateForCheck(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"admin", "teacher"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.CheckNameRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -230,9 +237,14 @@ func (cn *checkNameController) GetDateByCourseId(c *fiber.Ctx) error {
 }
 
 func (cn *checkNameController) CheckNameStudent(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"admin", "teacher"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.CheckNameRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -403,9 +415,14 @@ func (cn *checkNameController) GetCheckNameDataByCourseIdAndDate(c *fiber.Ctx) e
 }
 
 func (cn *checkNameController) EndDateCheckName(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"admin", "teacher"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.CheckNameRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"school-notification-backend/repository"
+	"strings"
 
 	"time"
 
@@ -34,7 +35,7 @@ func NewToken(userId string) (string, error) {
 		Id:        userId,
 		Issuer:    userId,
 		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
+		ExpiresAt: time.Now().Add(time.Minute * 30).Unix(),
 	}
 
 	tokenStr := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -50,13 +51,10 @@ func ValidateSignedMethod(token *jwt.Token) (interface{}, error) {
 }
 
 func ParseToken(tokenStr string) (*jwt.StandardClaims, error) {
-	if tryApikey(tokenStr) {
-		log.Println("authorized by apikey")
-		return nil, nil
-	}
 
+	log.Println(tokenStr)
 	claims := new(jwt.StandardClaims)
-	token, err := jwt.ParseWithClaims(tokenStr, claims, ValidateSignedMethod)
+	token, err := jwt.ParseWithClaims(strings.Split(tokenStr, " ")[1], claims, ValidateSignedMethod)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -71,18 +69,40 @@ func ParseToken(tokenStr string) (*jwt.StandardClaims, error) {
 	return claims, nil
 }
 
-func CheckRoleFromToken(token string, userRepo repository.UsersRepository, event string) error {
+func CheckRoleFromToken(token string, userRepo repository.UsersRepository, rc []string) error {
+	if tryApikey(token) {
+		log.Println("authorized by apikey")
+		return nil
+	}
+
+	if len(token) <= 6 || token[0:6] != "Bearer" {
+		return errors.New("invalid auth token")
+	}
+
 	payload, err := ParseToken(token)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
+	// log.Println(payload)
 	user, err := userRepo.GetById(payload.Id)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 	log.Println(user)
+
+	// check := true
+	// for _, v := range rc {
+	// 	if v == user.Role {
+	// 		check = false
+	// 		break
+	// 	}
+	// }
+
+	// if check {
+	// 	return errors.New("not permission")
+	// }
 
 	return nil
 }

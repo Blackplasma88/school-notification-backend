@@ -96,6 +96,21 @@ func (co *conversationController) CreateConversation(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
+	_, err = co.conversationRepo.GetByFilter(bson.M{"members": bson.M{
+		"$in": bson.A{
+			senderId,
+			receiverId,
+		},
+	}})
+	if err == nil {
+		log.Println("conversation already exists")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "conversation"+util.ErrValueAlreadyExists.Error())
+	}
+	if err.Error() != "mongo: no documents in result" {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
 	conversationNew := &models.Conversation{
 		Id:        primitive.NewObjectID(),
 		CreatedAt: time.Now().Format(time.RFC3339),

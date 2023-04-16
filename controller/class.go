@@ -5,6 +5,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 	"sort"
 
@@ -29,13 +30,20 @@ type classController struct {
 	classRepo            repository.ClassRepository
 	schoolDataRepository repository.SchoolDataRepository
 	profileRepo          repository.ProfileRepository
+	userRepo             repository.UsersRepository
 }
 
-func NewClassController(classRepo repository.ClassRepository, schoolDataRepository repository.SchoolDataRepository, profileRepo repository.ProfileRepository) ClassController {
-	return &classController{classRepo: classRepo, schoolDataRepository: schoolDataRepository, profileRepo: profileRepo}
+func NewClassController(classRepo repository.ClassRepository, schoolDataRepository repository.SchoolDataRepository, profileRepo repository.ProfileRepository, userRepo repository.UsersRepository) ClassController {
+	return &classController{classRepo: classRepo, schoolDataRepository: schoolDataRepository, profileRepo: profileRepo, userRepo: userRepo}
 }
 
 func (cl *classController) CreateClass(c *fiber.Ctx) error {
+
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cl.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	num, err := cl.classRepo.GetCountOfClassYear("1")
 	if err != nil && err.Error() != "mongo: no documents in result" {
@@ -181,9 +189,14 @@ func (cl *classController) GetClassByClassYearAndRoom(c *fiber.Ctx) error {
 }
 
 func (cl *classController) SetAdvisor(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cl.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.ClassRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)

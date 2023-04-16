@@ -6,6 +6,7 @@ import (
 	"os"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 	"time"
 
@@ -23,13 +24,19 @@ type InformationController interface {
 
 type informationController struct {
 	infoRepo repository.InformationRepository
+	userRepo repository.UsersRepository
 }
 
-func NewInformationController(infoRepo repository.InformationRepository) InformationController {
-	return &informationController{infoRepo: infoRepo}
+func NewInformationController(infoRepo repository.InformationRepository, userRepo repository.UsersRepository) InformationController {
+	return &informationController{infoRepo: infoRepo, userRepo: userRepo}
 }
 
 func (i *informationController) CreateInformation(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], i.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	name, err := util.CheckStringData(c.FormValue("name"), "name")
 	if err != nil {
@@ -111,6 +118,11 @@ func (i *informationController) CreateInformation(c *fiber.Ctx) error {
 }
 
 func (i *informationController) UpdateInformation(c *fiber.Ctx) error {
+	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], i.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	id, err := util.CheckStringData(c.FormValue("id"), "id")
 	if err != nil {
