@@ -517,6 +517,7 @@ func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
 	}
 	log.Println("find course of term", term)
 
+	log.Println(user.Role)
 	var coursesRes interface{}
 	if user.Role == "admin" || user.Role == "server" {
 		courses, err := cc.courseRepo.GetCourseAllByFilter(bson.M{"year": year, "term": term})
@@ -596,7 +597,7 @@ func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
 
 		courses := []*models.Course{}
 		for _, v := range profile.TermScore[index].CourseList {
-			course, err := cc.courseRepo.GetCourseById(v.Id.String())
+			course, err := cc.courseRepo.GetCourseById(v.Id.Hex())
 			if err != nil {
 				log.Println(err)
 				return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())

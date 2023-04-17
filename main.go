@@ -18,8 +18,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// check create converation by user again
-
 func init() {
 	// load env
 	err := godotenv.Load(".env")
@@ -62,9 +60,6 @@ func main() {
 	profileController := controller.NewProfileController(profileRepository, classRepository, schoolDataRepository, userRepository)
 	profileRoutes := routes.NewProfileRoute(profileController)
 
-	classController := controller.NewClassController(classRepository, schoolDataRepository, profileRepository, userRepository)
-	classRoutes := routes.NewClassRoute(classController)
-
 	// subject
 	subjectRepository := repository.NewSubjectRepository(conn)
 	subjectController := controller.NewSubjectController(subjectRepository, schoolDataRepository, profileRepository, userRepository)
@@ -87,7 +82,7 @@ func main() {
 	checkNameRoutes := routes.NewCheckNameRoute(checkNameController)
 
 	// course summary
-	courseSummaryController := controller.NewCourseSummaryController(courseSummaryRepository, courseRepository, scoreRepository, checkNameRepository, userRepository)
+	courseSummaryController := controller.NewCourseSummaryController(courseSummaryRepository, courseRepository, scoreRepository, checkNameRepository, userRepository, profileRepository)
 	courseSummaryRoutes := routes.NewCourseSummaryRoute(courseSummaryController)
 
 	schoolDataController := controller.NewSchoolDataController(schoolDataRepository, courseRepository, courseSummaryRepository, profileRepository, classRepository, locationRepository, userRepository)
@@ -110,6 +105,9 @@ func main() {
 	faceDetectionRepository := repository.NewFaceDetectionRepository(conn)
 	faceDetectionController := controller.NewFaceDetectionController(faceDetectionRepository, classRepository, userRepository)
 	faceDetectionRoutes := routes.NewFaceDetectionRoute(faceDetectionController)
+
+	classController := controller.NewClassController(classRepository, schoolDataRepository, profileRepository, userRepository, faceDetectionRepository)
+	classRoutes := routes.NewClassRoute(classController)
 
 	staticRoutes := routes.NewStaticRoutes()
 

@@ -29,6 +29,22 @@ type StudentData struct {
 	// CheckNameStatusMsg   string
 }
 
+type StudentDataRes struct {
+	CourseName    string  `json:"course_name" bson:"course_name"`
+	ScoreWorkGet  float64 `json:"score_work_get" bson:"score_work_get"`
+	ScoreWorkFull float64 `json:"score_work_full" bson:"score_work_full"`
+	ScoreMidGet   float64 `json:"score_mid_get" bson:"score_mid_get"`
+	ScoreMidFull  float64 `json:"score_mid_full" bson:"score_mid_full"`
+	ScoreFinalGet float64 `json:"score_final_get" bson:"score_final_get"`
+	ScoreFinaFull float64 `json:"score_final_full" bson:"score_final_full"`
+	Grade         float64 `json:"grade" bson:"grade"`
+
+	AllDateCount         int `json:"all_date_count" bson:"all_date_count"`
+	CheckNameAttendCount int `json:"check_name_attend_count" bson:"check_name_attend_count"`
+	CheckNameAbsentCount int `json:"check_name_absent_count" bson:"check_name_absent_count"`
+	CheckNameLateCount   int `json:"check_name_late_count" bson:"check_name_late_count"`
+}
+
 type CourseSummaryRequest struct {
 	CourseId string `json:"course_id"`
 }

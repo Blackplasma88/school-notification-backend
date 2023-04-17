@@ -17,6 +17,7 @@ import (
 type CourseSummaryController interface {
 	SummaryCourse(c *fiber.Ctx) error
 	GetSummaryCourse(c *fiber.Ctx) error
+	StudentGetSummaryCourse(c *fiber.Ctx) error
 }
 
 type courseSummaryController struct {
@@ -25,10 +26,11 @@ type courseSummaryController struct {
 	scoreRepository     repository.ScoreRepository
 	checkNameRepository repository.CheckNameRepository
 	userRepo            repository.UsersRepository
+	profileRepo         repository.ProfileRepository
 }
 
-func NewCourseSummaryController(courseSummaryRepo repository.CourseSummaryRepository, courseRepo repository.CourseRepository, scoreRepository repository.ScoreRepository, checkNameRepository repository.CheckNameRepository, userRepo repository.UsersRepository) CourseSummaryController {
-	return &courseSummaryController{courseSummaryRepo: courseSummaryRepo, courseRepo: courseRepo, scoreRepository: scoreRepository, checkNameRepository: checkNameRepository, userRepo: userRepo}
+func NewCourseSummaryController(courseSummaryRepo repository.CourseSummaryRepository, courseRepo repository.CourseRepository, scoreRepository repository.ScoreRepository, checkNameRepository repository.CheckNameRepository, userRepo repository.UsersRepository, profileRepo repository.ProfileRepository) CourseSummaryController {
+	return &courseSummaryController{courseSummaryRepo: courseSummaryRepo, courseRepo: courseRepo, scoreRepository: scoreRepository, checkNameRepository: checkNameRepository, userRepo: userRepo, profileRepo: profileRepo}
 }
 
 func (cs *courseSummaryController) GetSummaryCourse(c *fiber.Ctx) error {
@@ -92,6 +94,119 @@ func (cs *courseSummaryController) GetSummaryCourse(c *fiber.Ctx) error {
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
 		"course_summary": res,
+	})
+}
+
+func (cs *courseSummaryController) StudentGetSummaryCourse(c *fiber.Ctx) error {
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cs.userRepo, []string{"student"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
+	year, err := util.CheckStringData(c.Query("year"), "year")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("year:", year)
+
+	term, err := util.CheckStringData(c.Query("term"), "term")
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+	log.Println("term:", term)
+
+	p, err := cs.profileRepo.GetProfileById(bson.M{"profile_id": user.ProfileId, "role": user.Role}, user.Role)
+	if err != nil {
+		log.Println(err)
+		if err.Error() == "mongo: no documents in result" {
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		}
+		if err.Error() == "Id is not primitive objectID" {
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	profile, _ := p.(models.ProfileStudent)
+
+	index := -1
+	for i, c := range profile.TermScore {
+		if c.Year == year && c.Term == term {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		log.Println("year or term not found")
+		return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+	}
+
+	courses := []*models.Course{}
+	for _, v := range profile.TermScore[index].CourseList {
+		course, err := cs.courseRepo.GetCourseById(v.Id.Hex())
+		if err != nil {
+			log.Println(err)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
+		}
+
+		courses = append(courses, course)
+	}
+
+	var courseSumList []*models.CourseSummary
+	for _, v := range courses {
+		courseSum, err := cs.courseSummaryRepo.GetByFilter(bson.M{"course_id": v.Id.Hex()})
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		courseSumList = append(courseSumList, courseSum)
+
+	}
+
+	dataList := []models.StudentDataRes{}
+	for _, d := range courseSumList {
+		for _, data := range d.StudentData {
+			if data.StudentId == user.ProfileId {
+				course, err := cs.courseRepo.GetCourseById(d.CourseId)
+				if err != nil {
+					log.Println(err)
+					if err == mongo.ErrNoDocuments {
+						return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+					}
+					return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+				}
+				dataRes := models.StudentDataRes{
+					CourseName:           course.Name,
+					ScoreWorkGet:         data.ScoreWorkGet,
+					ScoreWorkFull:        data.ScoreWorkFull,
+					ScoreMidGet:          data.ScoreMidGet,
+					ScoreMidFull:         data.ScoreMidFull,
+					ScoreFinalGet:        data.ScoreFinalGet,
+					ScoreFinaFull:        data.ScoreFinaFull,
+					Grade:                data.Grade,
+					AllDateCount:         data.AllDateCount,
+					CheckNameAttendCount: data.CheckNameAttendCount,
+					CheckNameAbsentCount: data.CheckNameAbsentCount,
+					CheckNameLateCount:   data.CheckNameLateCount,
+				}
+				dataList = append(dataList, dataRes)
+				break
+			}
+		}
+	}
+
+	if len(dataList) == 0 {
+		log.Println(util.ErrNotFound)
+		return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"course_summary": dataList,
 	})
 }
 
@@ -265,7 +380,7 @@ func (cs *courseSummaryController) SummaryCourse(c *fiber.Ctx) error {
 					} else if cData.Status == "absent" {
 						totalDateAbsent++
 						break
-					} else if cData.Status == "late" {
+					} else if cData.Status == "late" || cData.Status == "" { // ต้องไม่ได้
 						totalDateLate++
 						break
 					} else {

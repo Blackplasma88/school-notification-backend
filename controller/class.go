@@ -31,10 +31,11 @@ type classController struct {
 	schoolDataRepository repository.SchoolDataRepository
 	profileRepo          repository.ProfileRepository
 	userRepo             repository.UsersRepository
+	faceDetectionRepo    repository.FaceDetectionRepository
 }
 
-func NewClassController(classRepo repository.ClassRepository, schoolDataRepository repository.SchoolDataRepository, profileRepo repository.ProfileRepository, userRepo repository.UsersRepository) ClassController {
-	return &classController{classRepo: classRepo, schoolDataRepository: schoolDataRepository, profileRepo: profileRepo, userRepo: userRepo}
+func NewClassController(classRepo repository.ClassRepository, schoolDataRepository repository.SchoolDataRepository, profileRepo repository.ProfileRepository, userRepo repository.UsersRepository, faceDetectionRepo repository.FaceDetectionRepository) ClassController {
+	return &classController{classRepo: classRepo, schoolDataRepository: schoolDataRepository, profileRepo: profileRepo, userRepo: userRepo, faceDetectionRepo: faceDetectionRepo}
 }
 
 func (cl *classController) CreateClass(c *fiber.Ctx) error {
@@ -82,6 +83,25 @@ func (cl *classController) CreateClass(c *fiber.Ctx) error {
 	}
 
 	class, err := cl.classRepo.Insert(classNew)
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	dataNew := &models.FaceDetectData{
+		Id:                   primitive.NewObjectID(),
+		CreatedAt:            time.Now().Format(time.RFC3339),
+		UpdatedAt:            time.Now().Format(time.RFC3339),
+		Status:               "not",
+		Name:                 classNew.ClassYear + "/" + classNew.ClassRoom,
+		ClassId:              classNew.Id.Hex(),
+		NumberOfStudent:      classNew.NumberOfStudent,
+		StudentIdList:        classNew.StudentIdList,
+		NumberOfImage:        0,
+		ImageStudentPathList: createEmptyImageList(classNew.NumberOfStudent),
+	}
+
+	_, err = cl.faceDetectionRepo.Insert(dataNew)
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())

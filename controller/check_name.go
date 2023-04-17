@@ -277,7 +277,7 @@ func (cn *checkNameController) CheckNameStudent(c *fiber.Ctx) error {
 	if err != nil {
 		log.Println(err)
 		if err == mongo.ErrNoDocuments {
-			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, "date "+util.ErrNotFound.Error())
 		}
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}

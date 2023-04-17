@@ -245,13 +245,19 @@ func (p *profileController) CreateNewProfile(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
+	password, err := security.EncryptPassword(req.ProfileId)
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+
 	// sign up
 	id := profileInsert.InsertedID.(primitive.ObjectID)
 	user := models.User{
 		Id:        primitive.NewObjectID(),
 		CreatedAt: time.Now().Format(time.RFC3339),
 		Username:  req.ProfileId,
-		Password:  req.ProfileId,
+		Password:  password,
 		ProfileId: req.ProfileId,
 		Role:      req.Role,
 		UserId:    id.Hex(),
