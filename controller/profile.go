@@ -19,7 +19,7 @@ import (
 type ProfileController interface {
 	CreateNewProfile(c *fiber.Ctx) error
 	GetProfileByProfileId(c *fiber.Ctx) error
-	GetProfileAll(c *fiber.Ctx) error
+	GetProfileAllByRole(c *fiber.Ctx) error
 	GetProfileTeacherByCategory(c *fiber.Ctx) error
 	GetProfileById(c *fiber.Ctx) error
 }
@@ -35,7 +35,12 @@ func NewProfileController(profileRepo repository.ProfileRepository, classRepo re
 	return &profileController{profileRepo: profileRepo, classRepo: classRepo, schoolDataRepository: schoolDataRepository, userRepo: userRepo}
 }
 
-func (p *profileController) GetProfileAll(c *fiber.Ctx) error {
+func (p *profileController) GetProfileAllByRole(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], p.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	role, err := util.CheckStringData(c.Query("role"), "role")
 	if err != nil {
@@ -60,6 +65,11 @@ func (p *profileController) GetProfileAll(c *fiber.Ctx) error {
 }
 
 func (p *profileController) GetProfileByProfileId(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], p.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	profileId, err := util.CheckStringData(c.Query("profile_id"), "profile_id")
 	if err != nil {
@@ -103,6 +113,11 @@ func (p *profileController) GetProfileByProfileId(c *fiber.Ctx) error {
 }
 
 func (p *profileController) GetProfileById(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], p.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	id, err := util.CheckStringData(c.Query("id"), "id")
 	if err != nil {
@@ -134,6 +149,11 @@ func (p *profileController) GetProfileById(c *fiber.Ctx) error {
 }
 
 func (p *profileController) GetProfileTeacherByCategory(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], p.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	category, err := util.CheckStringData(c.Query("category"), "category")
 	if err != nil {
@@ -170,7 +190,7 @@ func (p *profileController) GetProfileTeacherByCategory(c *fiber.Ctx) error {
 }
 
 func (p *profileController) CreateNewProfile(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], p.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], p.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -225,8 +245,27 @@ func (p *profileController) CreateNewProfile(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
+	// sign up
+	id := profileInsert.InsertedID.(primitive.ObjectID)
+	user := models.User{
+		Id:        primitive.NewObjectID(),
+		CreatedAt: time.Now().Format(time.RFC3339),
+		Username:  req.ProfileId,
+		Password:  req.ProfileId,
+		ProfileId: req.ProfileId,
+		Role:      req.Role,
+		UserId:    id.Hex(),
+	}
+
+	result, err := p.userRepo.InsertUser(&user)
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	}
+
+	log.Println("result sign up:", result)
 	log.Println("create profile success")
-	log.Println("profile id:", profileInsert.InsertedID)
+	log.Println("profile id:", id)
 
 	return util.ResponseSuccess(c, fiber.StatusCreated, "create profile success", map[string]interface{}{
 		"profile_id": req.ProfileId,

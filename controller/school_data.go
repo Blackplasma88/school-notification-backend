@@ -43,7 +43,7 @@ func NewSchoolDataController(schoolDataRepository repository.SchoolDataRepositor
 }
 
 func (s *schoolDataController) AddYearAndTerm(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -111,7 +111,7 @@ func (s *schoolDataController) AddYearAndTerm(c *fiber.Ctx) error {
 }
 
 func (s *schoolDataController) AddSubjectCategory(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -170,7 +170,7 @@ func (s *schoolDataController) AddSubjectCategory(c *fiber.Ctx) error {
 }
 
 func (s *schoolDataController) UpdateSchoolData(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -236,6 +236,11 @@ func (s *schoolDataController) UpdateSchoolData(c *fiber.Ctx) error {
 }
 
 func (s *schoolDataController) GetSchoolDataAll(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	data, err := s.schoolDataRepository.GetAll()
 	if err != nil {
@@ -257,6 +262,11 @@ func (s *schoolDataController) GetSchoolDataAll(c *fiber.Ctx) error {
 }
 
 func (s *schoolDataController) GetSubjectCategory(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	data, err := s.schoolDataRepository.GetByFilterAll(bson.M{"type": "SubjectCategory"})
 	if err != nil {
@@ -278,6 +288,11 @@ func (s *schoolDataController) GetSubjectCategory(c *fiber.Ctx) error {
 }
 
 func (s *schoolDataController) GetTermYear(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	data, err := s.schoolDataRepository.GetByFilterAll(bson.M{"type": "YearAndTerm"})
 	if err != nil {
@@ -299,6 +314,12 @@ func (s *schoolDataController) GetTermYear(c *fiber.Ctx) error {
 }
 
 func (s *schoolDataController) GetSchoolDataById(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	id, err := util.CheckStringData(c.Query("id"), "id")
 	if err != nil {
 		log.Println(err)
@@ -329,7 +350,7 @@ func (s *schoolDataController) GetSchoolDataById(c *fiber.Ctx) error {
 }
 
 func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())

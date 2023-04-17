@@ -99,12 +99,12 @@ func main() {
 
 	// conversation
 	conversationRepository := repository.NewConversationRepository(conn)
-	conversationController := controller.NewConversationController(conversationRepository, profileRepository)
+	conversationController := controller.NewConversationController(conversationRepository, profileRepository, userRepository)
 	conversationRoutes := routes.NewConversationRoute(conversationController)
 
 	// message
 	messageRepository := repository.NewMessageRepository(conn)
-	messageController := controller.NewMessageController(messageRepository, conversationRepository)
+	messageController := controller.NewMessageController(messageRepository, conversationRepository, userRepository)
 	messageRoutes := routes.NewMessageRoute(messageController)
 
 	faceDetectionRepository := repository.NewFaceDetectionRepository(conn)

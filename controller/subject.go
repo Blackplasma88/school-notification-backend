@@ -36,7 +36,7 @@ func NewSubjectController(subjectRepository repository.SubjectRepository, school
 }
 
 func (s *subjectController) CreateSubject(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -160,7 +160,7 @@ func (s *subjectController) CreateSubject(c *fiber.Ctx) error {
 }
 
 func (s *subjectController) UpdateSubject(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -255,6 +255,11 @@ func (s *subjectController) UpdateSubject(c *fiber.Ctx) error {
 }
 
 func (s *subjectController) GetSubjectAll(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	subjects, err := s.subjectRepository.GetAll()
 	if err != nil {
@@ -276,6 +281,12 @@ func (s *subjectController) GetSubjectAll(c *fiber.Ctx) error {
 }
 
 func (s *subjectController) GetSubjectById(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	id, err := util.CheckStringData(c.Query("subject_id"), "subject_id")
 	if err != nil {
 		log.Println(err)
@@ -306,6 +317,12 @@ func (s *subjectController) GetSubjectById(c *fiber.Ctx) error {
 }
 
 func (s *subjectController) GetSubjectByCategory(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	category, err := util.CheckStringData(c.Query("category"), "category")
 	if err != nil {
 		log.Println(err)
@@ -336,9 +353,14 @@ func (s *subjectController) GetSubjectByCategory(c *fiber.Ctx) error {
 }
 
 func (s *subjectController) AddInstructor(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.SubjectRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)

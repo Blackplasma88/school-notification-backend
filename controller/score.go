@@ -33,7 +33,7 @@ func NewScoreController(scoreRepository repository.ScoreRepository, courseRepo r
 }
 
 func (s *scoreController) CreateScore(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin", "teacher"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin", "teacher"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -145,7 +145,7 @@ func (s *scoreController) CreateScore(c *fiber.Ctx) error {
 }
 
 func (s *scoreController) UpdateStudentScore(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin", "teacher"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"admin", "teacher"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -405,8 +405,14 @@ func (s *scoreController) UpdateStudentScore(c *fiber.Ctx) error {
 // }
 
 func (s *scoreController) GetScoreByCourseId(c *fiber.Ctx) error {
-	role := c.Query("role")
-	profileId := c.Query("id")
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+	role := user.Role
+	profileId := user.ProfileId
+
 	courseId, err := util.CheckStringData(c.Query("course_id"), "course_id")
 	if err != nil {
 		log.Println(err)
@@ -439,17 +445,12 @@ func (s *scoreController) GetScoreByCourseId(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
 	}
 
-	scoreRes := make(map[string]interface{})
 	if role == "teacher" {
 		if profileId != course.InstructorId {
 			log.Println("not permiistion")
 			return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
 		}
-		scoreNames := models.ScoreTeacherRes{}
-		for _, v := range scores {
-			scoreNames.Name = append(scoreNames.Name, v.Name)
-		}
-		scoreRes["score"] = scoreNames
+
 	} else if role == "student" {
 		check := true
 		for _, v := range course.StudentIdList {
@@ -462,45 +463,37 @@ func (s *scoreController) GetScoreByCourseId(c *fiber.Ctx) error {
 			log.Println("not permiistion")
 			return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
 		}
-		scoreList := []models.ScoreStudentRes{}
-		for _, v := range scores {
-			// data := models.ScoreStudentRes{
-			// 	Name:      v.Name,
-			// 	ScoreFull: v.ScoreFull,
-			// }
-			for _, info := range v.ScoreInformation {
-				if info.StudentId == profileId {
-					// data.UpdatedAt = info.UpdatedAt
-					// data.ScoreGet = info.ScoreGet
-					// data.Status = info.Status
-					scoreList = append(scoreList, models.ScoreStudentRes{
-						Name:      v.Name,
-						UpdatedAt: info.UpdatedAt,
-						ScoreFull: v.ScoreFull,
-						ScoreGet:  info.ScoreGet,
-						Status:    info.Status,
-					})
-					break
-				}
-			}
-			// scoreList = append(scoreList, data)
-		}
-		if len(scoreList) == 0 {
-			log.Println("student id", util.ErrNotFound)
-			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "score "+util.ErrNotFound.Error())
-		}
-		scoreRes["score_list"] = scoreList
 	} else {
-		log.Println("role", util.ErrValueInvalid)
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
+		if role != "server" {
+			log.Println("role", util.ErrValueInvalid)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
+		}
 	}
 
-	return util.ResponseSuccess(c, fiber.StatusOK, "success", scoreRes)
+	scoreNames := []string{}
+	for _, v := range scores {
+		scoreNames = append(scoreNames, v.Name)
+	}
+
+	if len(scoreNames) == 0 {
+		log.Println("score name ", util.ErrNotFound)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "score name "+util.ErrNotFound.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"score_name_list": scoreNames,
+	})
 }
 
 func (s *scoreController) GetScoreDataByCourseIdAndNameSore(c *fiber.Ctx) error {
-	role := c.Query("role")
-	profileId := c.Query("id")
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], s.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+	role := user.Role
+	profileId := user.ProfileId
+
 	courseId, err := util.CheckStringData(c.Query("course_id"), "course_id")
 	if err != nil {
 		log.Println(err)
@@ -519,35 +512,80 @@ func (s *scoreController) GetScoreDataByCourseIdAndNameSore(c *fiber.Ctx) error 
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
-	name, err := util.CheckStringData(c.Query("name"), "name")
-	if err != nil {
-		log.Println(err)
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
-	}
-	log.Println("find score name:", name)
-
-	score, err := s.scoreRepository.GetScoreByFilter(bson.M{"course_id": courseId, "name": name})
-	if err != nil {
-		log.Println(err)
-		if err == mongo.ErrNoDocuments {
-			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
-		}
-		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
-	}
-
 	var scoreRes interface{}
 	if role == "teacher" {
 		if profileId != course.InstructorId {
 			log.Println("not permiistion")
 			return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
 		}
+
+		name, err := util.CheckStringData(c.Query("name"), "name")
+		if err != nil {
+			log.Println(err)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		log.Println("find score name:", name)
+
+		score, err := s.scoreRepository.GetScoreByFilter(bson.M{"course_id": courseId, "name": name})
+		if err != nil {
+			log.Println(err)
+			if err == mongo.ErrNoDocuments {
+				return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+			}
+			return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+		}
+
 		scoreRes = score
-		// for _, v := range score.ScoreInformation {
-		// 	scoreRes = append(scoreRes, v)
-		// }
+	} else if role == "student" {
+		check := true
+		for _, v := range course.StudentIdList {
+			if v == profileId {
+				check = false
+				break
+			}
+		}
+		if check {
+			log.Println("not permiistion")
+			return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
+		}
+		scores, err := s.scoreRepository.GetByFilterAll(bson.M{"course_id": courseId})
+		if err != nil {
+			log.Println(err)
+			if err == mongo.ErrNoDocuments {
+				return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+			}
+			return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+		}
+
+		if len(scores) == 0 {
+			log.Println("score not found")
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
+		}
+		scoreList := []models.ScoreStudentRes{}
+		for _, v := range scores {
+			for _, info := range v.ScoreInformation {
+				if info.StudentId == profileId {
+					scoreList = append(scoreList, models.ScoreStudentRes{
+						Name:      v.Name,
+						UpdatedAt: info.UpdatedAt,
+						ScoreFull: v.ScoreFull,
+						ScoreGet:  info.ScoreGet,
+						Status:    info.Status,
+					})
+					break
+				}
+			}
+		}
+		if len(scoreList) == 0 {
+			log.Println("student id", util.ErrNotFound)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "score "+util.ErrNotFound.Error())
+		}
+		scoreRes = scoreList
 	} else {
-		log.Println("role", util.ErrValueInvalid)
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
+		if role != "server" {
+			log.Println("role", util.ErrValueInvalid)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
+		}
 	}
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{

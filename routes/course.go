@@ -24,6 +24,6 @@ func (r *courseRoutes) Install(app *fiber.App) {
 	// app.Post("/course/update-data", r.courseController.UpdateCoursesData)
 	// app.Post("/course/check-name", r.courseController.ManageCheckName)
 	// app.Post("/course/score", r.courseController.ManageScore)
-	app.Post("/course/change-status", r.courseController.ChangeCourseStatus)
+	app.Post("/course/change-to-progress", r.courseController.ChangeCourseToProgress)
 	app.Post("/course/finish-course", r.courseController.FinishCourse)
 }

@@ -32,6 +32,11 @@ func NewCourseSummaryController(courseSummaryRepo repository.CourseSummaryReposi
 }
 
 func (cs *courseSummaryController) GetSummaryCourse(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cs.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	courseId, err := util.CheckStringData(c.Query("course_id"), "course_id")
 	if err != nil {
@@ -91,7 +96,7 @@ func (cs *courseSummaryController) GetSummaryCourse(c *fiber.Ctx) error {
 }
 
 func (cs *courseSummaryController) SummaryCourse(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cs.userRepo, []string{"admin", "teacher"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cs.userRepo, []string{"admin", "teacher"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())

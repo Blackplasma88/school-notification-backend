@@ -34,7 +34,7 @@ func NewCheckNameController(checkNameRepository repository.CheckNameRepository, 
 }
 
 func (cn *checkNameController) AddDateForCheck(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"admin", "teacher"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"admin", "teacher"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -143,8 +143,14 @@ func (cn *checkNameController) AddDateForCheck(c *fiber.Ctx) error {
 }
 
 func (cn *checkNameController) GetDateByCourseId(c *fiber.Ctx) error {
-	role := c.Query("role")
-	profileId := c.Query("id")
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+	role := user.Role
+	profileId := user.ProfileId
+
 	courseId, err := util.CheckStringData(c.Query("course_id"), "course_id")
 	if err != nil {
 		log.Println(err)
@@ -177,17 +183,12 @@ func (cn *checkNameController) GetDateByCourseId(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
 	}
 
-	checkNameRes := make(map[string]interface{})
 	if role == "teacher" {
 		if profileId != course.InstructorId {
 			log.Println("not permiistion")
 			return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
 		}
-		checkNamel := models.CheckNameTeacherRes{}
-		for _, v := range checkNameList {
-			checkNamel.Date = append(checkNamel.Date, v.Date)
-		}
-		checkNameRes["check_name"] = checkNamel
+
 	} else if role == "student" {
 		check := true
 		for _, v := range course.StudentIdList {
@@ -200,44 +201,30 @@ func (cn *checkNameController) GetDateByCourseId(c *fiber.Ctx) error {
 			log.Println("not permiistion")
 			return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
 		}
-		checkNameListRes := []models.CheckNameStudentRes{}
-		for _, v := range checkNameList {
-			// data := models.CheckNameStudentRes{
-			// 	Date: v.Date,
-			// }
-			for _, check := range v.CheckNameData {
-				if check.StudentId == profileId {
-					// data.CreatedAt = check.CreatedAt
-					// data.Time = check.Time
-					// data.Status = check.Status
-					// data.CheckBy = check.CheckBy
-					checkNameListRes = append(checkNameListRes, models.CheckNameStudentRes{
-						Date:      v.Date,
-						UpdatedAt: check.UpdatedAt,
-						Time:      check.Time,
-						Status:    check.Status,
-						CheckBy:   check.CheckBy,
-					})
-					break
-				}
-			}
-			// checkNameListRes = append(checkNameListRes, data)
-		}
-		if len(checkNameListRes) == 0 {
-			log.Println("student id", util.ErrNotFound)
-			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "check name "+util.ErrNotFound.Error())
-		}
-		checkNameRes["check_name_list"] = checkNameListRes
 	} else {
-		log.Println("role", util.ErrValueInvalid)
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
+		if role != "server" {
+			log.Println("role", util.ErrValueInvalid)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
+		}
 	}
 
-	return util.ResponseSuccess(c, fiber.StatusOK, "success", checkNameRes)
+	checkNamel := []string{}
+	for _, v := range checkNameList {
+		checkNamel = append(checkNamel, v.Date)
+	}
+
+	if len(checkNamel) == 0 {
+		log.Println("date ", util.ErrNotFound)
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "date "+util.ErrNotFound.Error())
+	}
+
+	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
+		"date_list": checkNamel,
+	})
 }
 
 func (cn *checkNameController) CheckNameStudent(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"admin", "teacher"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"admin", "teacher"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -361,8 +348,15 @@ func (cn *checkNameController) CheckNameStudent(c *fiber.Ctx) error {
 }
 
 func (cn *checkNameController) GetCheckNameDataByCourseIdAndDate(c *fiber.Ctx) error {
-	role := c.Query("role")
-	profileId := c.Query("id")
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+	// role := c.Query("role")
+	role := user.Role
+	// profileId := c.Query("id")
+	profileId := user.ProfileId
 	courseId, err := util.CheckStringData(c.Query("course_id"), "course_id")
 	if err != nil {
 		log.Println(err)
@@ -381,32 +375,77 @@ func (cn *checkNameController) GetCheckNameDataByCourseIdAndDate(c *fiber.Ctx) e
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
-	date, err := util.CheckStringData(c.Query("date"), "date")
-	if err != nil {
-		log.Println(err)
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
-	}
-	log.Println("check name date:", date)
-
-	data, err := cn.checkNameRepository.GetByFilter(bson.M{"course_id": courseId, "date": date})
-	if err != nil {
-		log.Println(err)
-		if err == mongo.ErrNoDocuments {
-			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
-		}
-		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
-	}
-
 	var dataRes interface{}
 	if role == "teacher" {
+		date, err := util.CheckStringData(c.Query("date"), "date")
+		if err != nil {
+			log.Println(err)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		log.Println("check name date:", date)
+
 		if profileId != course.InstructorId {
 			log.Println("not permiistion")
 			return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
 		}
+
+		data, err := cn.checkNameRepository.GetByFilter(bson.M{"course_id": courseId, "date": date})
+		if err != nil {
+			log.Println(err)
+			if err == mongo.ErrNoDocuments {
+				return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+			}
+			return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+		}
 		dataRes = data
+	} else if role == "student" {
+
+		check := true
+		for _, v := range course.StudentIdList {
+			if v == profileId {
+				check = false
+				break
+			}
+		}
+		if check {
+			log.Println("not permiistion")
+			return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
+		}
+
+		checkNameList, err := cn.checkNameRepository.GetByFilterAll(bson.M{"course_id": courseId})
+		if err != nil {
+			log.Println(err)
+			if err == mongo.ErrNoDocuments {
+				return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+			}
+			return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+		}
+
+		checkNameListRes := []models.CheckNameStudentRes{}
+		for _, v := range checkNameList {
+			for _, check := range v.CheckNameData {
+				if check.StudentId == profileId {
+					checkNameListRes = append(checkNameListRes, models.CheckNameStudentRes{
+						Date:      v.Date,
+						UpdatedAt: check.UpdatedAt,
+						Time:      check.Time,
+						Status:    check.Status,
+						CheckBy:   check.CheckBy,
+					})
+					break
+				}
+			}
+		}
+		if len(checkNameListRes) == 0 {
+			log.Println("student id not have checked")
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "student id not have checked")
+		}
+		dataRes = checkNameListRes
 	} else {
-		log.Println("role", util.ErrValueInvalid)
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
+		if role != "server" {
+			log.Println("role", util.ErrValueInvalid)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
+		}
 	}
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
@@ -415,7 +454,7 @@ func (cn *checkNameController) GetCheckNameDataByCourseIdAndDate(c *fiber.Ctx) e
 }
 
 func (cn *checkNameController) EndDateCheckName(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"admin", "teacher"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cn.userRepo, []string{"admin", "teacher"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())

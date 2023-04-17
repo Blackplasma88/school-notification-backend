@@ -31,10 +31,6 @@ type ScoreRequest struct {
 	Type      string   `json:"type" bson:"type"`
 }
 
-type ScoreTeacherRes struct {
-	Name []string `json:"name" bson:"name"`
-}
-
 type ScoreStudentRes struct {
 	Name      string   `json:"name" bson:"name"`
 	UpdatedAt string   `json:"updated_at" bson:"updated_at"`

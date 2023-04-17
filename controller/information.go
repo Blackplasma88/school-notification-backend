@@ -32,7 +32,7 @@ func NewInformationController(infoRepo repository.InformationRepository, userRep
 }
 
 func (i *informationController) CreateInformation(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], i.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], i.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -118,7 +118,7 @@ func (i *informationController) CreateInformation(c *fiber.Ctx) error {
 }
 
 func (i *informationController) UpdateInformation(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], i.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], i.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -222,6 +222,11 @@ func (i *informationController) UpdateInformation(c *fiber.Ctx) error {
 }
 
 func (i *informationController) GetInformationAll(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], i.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	infos, err := i.infoRepo.GetAll()
 	if err != nil {
@@ -243,6 +248,11 @@ func (i *informationController) GetInformationAll(c *fiber.Ctx) error {
 }
 
 func (i *informationController) GetInformationById(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], i.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	id, err := util.CheckStringData(c.Query("id"), "id")
 	if err != nil {

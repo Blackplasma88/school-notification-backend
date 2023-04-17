@@ -32,7 +32,7 @@ func NewLocationController(locationRepo repository.LocationRepository, userRepo 
 }
 
 func (l *locationController) CreateLocation(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], l.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], l.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -108,9 +108,14 @@ func (l *locationController) CreateLocation(c *fiber.Ctx) error {
 }
 
 func (l *locationController) UpdateLocationData(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], l.userRepo, []string{"admin"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.LocationRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -197,6 +202,11 @@ func (l *locationController) UpdateLocationData(c *fiber.Ctx) error {
 }
 
 func (l *locationController) GetLocationAll(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], l.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	locations, err := l.locationRepo.GetAll()
 	if err != nil {
@@ -218,6 +228,12 @@ func (l *locationController) GetLocationAll(c *fiber.Ctx) error {
 }
 
 func (l *locationController) GetLocationById(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], l.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	id, err := util.CheckStringData(c.Query("location_id"), "location_id")
 	if err != nil {
 		log.Println(err)

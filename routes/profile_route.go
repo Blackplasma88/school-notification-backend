@@ -15,7 +15,7 @@ func NewProfileRoute(profileController controller.ProfileController) Routes {
 }
 
 func (r *profileRoutes) Install(app *fiber.App) {
-	app.Get("/profile/all", r.profileController.GetProfileAll)
+	app.Get("/profile/all", r.profileController.GetProfileAllByRole)
 	app.Get("/profile/profile_id", r.profileController.GetProfileByProfileId)
 	app.Get("/profile/id", r.profileController.GetProfileById)
 	app.Get("/profile/teacher/category", r.profileController.GetProfileTeacherByCategory)

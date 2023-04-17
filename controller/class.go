@@ -39,7 +39,7 @@ func NewClassController(classRepo repository.ClassRepository, schoolDataReposito
 
 func (cl *classController) CreateClass(c *fiber.Ctx) error {
 
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cl.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cl.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -93,6 +93,12 @@ func (cl *classController) CreateClass(c *fiber.Ctx) error {
 }
 
 func (cl *classController) GetClassAllByClassYear(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cl.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	classYear, err := util.CheckStringData(c.Query("class_year"), "class_year")
 	if err != nil {
 		log.Println(err)
@@ -120,6 +126,12 @@ func (cl *classController) GetClassAllByClassYear(c *fiber.Ctx) error {
 }
 
 func (cl *classController) GetClassById(c *fiber.Ctx) error {
+
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cl.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	id, err := util.CheckStringData(c.Query("class_id"), "class_id")
 	if err != nil {
@@ -151,6 +163,11 @@ func (cl *classController) GetClassById(c *fiber.Ctx) error {
 }
 
 func (cl *classController) GetClassByClassYearAndRoom(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cl.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	classYear, err := util.CheckStringData(c.Query("class_year"), "class_year")
 	if err != nil {
@@ -189,7 +206,7 @@ func (cl *classController) GetClassByClassYearAndRoom(c *fiber.Ctx) error {
 }
 
 func (cl *classController) SetAdvisor(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cl.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cl.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())

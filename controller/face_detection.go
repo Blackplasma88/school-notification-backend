@@ -36,6 +36,12 @@ func NewFaceDetectionController(faceDetectionRepo repository.FaceDetectionReposi
 }
 
 func (f *faceDetectionController) OpenCamera(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "teacher"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	classId, err := util.CheckStringData(c.Query("class_id"), "class_id")
 	if err != nil {
 		log.Println(err)
@@ -67,7 +73,7 @@ func (f *faceDetectionController) OpenCamera(c *fiber.Ctx) error {
 }
 
 func (f *faceDetectionController) CreatFaceDetectionData(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -139,7 +145,7 @@ func (f *faceDetectionController) CreatFaceDetectionData(c *fiber.Ctx) error {
 }
 
 func (f *faceDetectionController) UploadImageData(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "server"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -219,7 +225,7 @@ func (f *faceDetectionController) UploadImageData(c *fiber.Ctx) error {
 }
 
 func (f *faceDetectionController) ModelTrained(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "server"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -299,6 +305,11 @@ func (f *faceDetectionController) ModelTrained(c *fiber.Ctx) error {
 }
 
 func (f *faceDetectionController) GetAll(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "server"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	datas, err := f.faceDetectionRepo.GetAll()
 	if err != nil {
@@ -320,6 +331,12 @@ func (f *faceDetectionController) GetAll(c *fiber.Ctx) error {
 }
 
 func (f *faceDetectionController) GetById(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "server"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	id, err := util.CheckStringData(c.Query("id"), "id")
 	if err != nil {
 		log.Println(err)
@@ -350,6 +367,12 @@ func (f *faceDetectionController) GetById(c *fiber.Ctx) error {
 }
 
 func (f *faceDetectionController) GetByClassId(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "server"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	classId, err := util.CheckStringData(c.Query("class_id"), "class_id")
 	if err != nil {
 		log.Println(err)

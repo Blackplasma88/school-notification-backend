@@ -38,10 +38,6 @@ type CheckNameRequest struct {
 	// TimeEnd string `json:"time_end"`
 }
 
-type CheckNameTeacherRes struct {
-	Date []string `json:"date"`
-}
-
 type CheckNameStudentRes struct {
 	Date      string `json:"date"`
 	UpdatedAt string `json:"updated_at" bson:"updated_at"`

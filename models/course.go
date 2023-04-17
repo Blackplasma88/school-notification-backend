@@ -34,7 +34,6 @@ type DateTime struct {
 
 type CourseRequest struct {
 	Id           string     `json:"id"`
-	Event        string     `json:"event"`
 	SubjectId    string     `json:"subject_id"`
 	InstructorId string     `json:"instructor_id"`
 	LocationId   string     `json:"location_id"`

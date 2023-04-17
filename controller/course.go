@@ -17,7 +17,7 @@ import (
 
 type CourseController interface {
 	CreateCourse(c *fiber.Ctx) error
-	ChangeCourseStatus(c *fiber.Ctx) error
+	ChangeCourseToProgress(c *fiber.Ctx) error
 	GetCourseByYearAndTerm(c *fiber.Ctx) error
 	FinishCourse(c *fiber.Ctx) error
 	GetCourseById(c *fiber.Ctx) error
@@ -39,7 +39,7 @@ func NewCourseController(courseRepo repository.CourseRepository, subjectReposito
 }
 
 func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -405,8 +405,8 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 	})
 }
 
-func (cc *courseController) ChangeCourseStatus(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"admin", "teacher"})
+func (cc *courseController) ChangeCourseToProgress(c *fiber.Ctx) error {
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"admin", "teacher"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -443,24 +443,15 @@ func (cc *courseController) ChangeCourseStatus(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
 	}
 
-	event, err := util.CheckStringData(req.Event, "event")
-	if err != nil {
-		log.Println(err)
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+	if course.Status != "create" && course.Status != "summary" {
+		log.Println("status invalid")
+		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ReturnErrorStatusInvalid("course", "create").Error())
 	}
-	log.Println("event:", event)
 
-	if event == "ChangeToProgress" {
-		if course.Status != "create" {
-			log.Println("status invalid")
-			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ReturnErrorStatusInvalid("course", "create").Error())
-		}
-
-		course.Status = "progress"
-	} else if event == "ChangeReverseSummary" {
-		if course.Status != "summary" {
-			log.Println("status invalid")
-			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ReturnErrorStatusInvalid("course", "summary").Error())
+	if course.Status == "create" {
+		if user.Role != "admin" {
+			log.Println("role", util.ErrValueInvalid)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
 		}
 
 		if course.SubjectId == "" {
@@ -484,74 +475,13 @@ func (cc *courseController) ChangeCourseStatus(c *fiber.Ctx) error {
 		}
 
 		course.Status = "progress"
-
-	} else if event == "ChangeToFinish" {
-		if course.Status != "summary" {
-			log.Println("status invalid")
-			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ReturnErrorStatusInvalid("course", "final").Error())
+	} else if course.Status == "summary" && user.Role == "teacher" {
+		if user.Role != "teacher" {
+			log.Println("role", util.ErrValueInvalid)
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, "role"+util.ErrValueInvalid.Error())
 		}
 
-		// for _, v := range course.StudentSummary {
-		// 	profile, err := cc.profileRepo.GetStudentProfileById(bson.M{"profile_id": v.StudentId, "role": "student"})
-		// 	if err != nil {
-		// 		log.Println(err)
-		// 		continue
-		// 		// if err.Error() == "mongo: no documents in result" {
-		// 		// 	return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
-		// 		// }
-		// 		// if err.Error() == "Id is not primitive objectID" {
-		// 		// 	return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
-		// 		// }
-		// 		// return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
-		// 	}
-
-		// 	for i, t := range profile.TermScore {
-		// 		if t.Year == course.CourseData.Year && t.Term == course.CourseData.Term {
-
-		// 			totalTermGrade := 0.0
-		// 			for j, courseList := range t.CourseList {
-		// 				if courseList.CourseId == course.CourseId {
-		// 					profile.TermScore[i].CourseList[j].CreatedAt = time.Now().Format(time.RFC3339)
-		// 					profile.TermScore[i].CourseList[j].Grade = v.Grade
-		// 					profile.TermScore[i].CourseList[j].ScoreGet = v.ScoreGet
-		// 					profile.TermScore[i].CourseList[j].ScoreFull = v.ScoreFull
-		// 					profile.TermScore[i].CourseList[j].Status = v.Status
-		// 					profile.TermScore[i].CourseList[j].Credit = course.CourseData.Credit
-		// 					profile.TermScore[i].TermCredit += course.CourseData.Credit
-		// 					profile.AllCredit += course.CourseData.Credit
-		// 					break
-		// 				}
-		// 			}
-
-		// 			for _, courseList := range profile.TermScore[i].CourseList {
-		// 				totalTermGrade += courseList.Grade * float64(courseList.Credit)
-		// 			}
-		// 			// เกรด * หน่วยกิต นำมารวมกัน หารด้วยหน่วยกิตทั้งหมด
-		// 			profile.TermScore[i].GPA = totalTermGrade / float64(profile.TermScore[i].TermCredit)
-		// 		}
-
-		// 		totalGrade := 0.0
-		// 		for _, t := range profile.TermScore {
-		// 			totalGrade += t.GPA * float64(t.TermCredit)
-		// 		}
-
-		// 		profile.GPA = totalGrade / float64(profile.AllCredit)
-
-		// 		_, err = cc.profileRepo.Update(profile.Id, profile)
-		// 		if err != nil {
-		// 			log.Println(err)
-		// 			continue
-		// 			// return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
-		// 		}
-
-		// 		break
-		// 	}
-		// }
-
-		course.Status = "finish"
-	} else {
-		log.Println("event is invalid")
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrEventInvalid.Error())
+		course.Status = "progress"
 	}
 
 	course.UpdatedAt = time.Now().Format(time.RFC3339)
@@ -568,18 +498,12 @@ func (cc *courseController) ChangeCourseStatus(c *fiber.Ctx) error {
 }
 
 func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
-	profileId, err := util.CheckStringData(c.Query("profile_id"), "profile_id")
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"all"})
 	if err != nil {
 		log.Println(err)
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
 	}
-	log.Println("find course of profile id", profileId)
-	role, err := util.CheckStringData(c.Query("role"), "role")
-	if err != nil {
-		log.Println(err)
-		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
-	}
-	log.Println("find course of role", role)
+
 	year, err := util.CheckStringData(c.Query("year"), "year")
 	if err != nil {
 		log.Println(err)
@@ -594,7 +518,7 @@ func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
 	log.Println("find course of term", term)
 
 	var coursesRes interface{}
-	if role == "admin" {
+	if user.Role == "admin" || user.Role == "server" {
 		courses, err := cc.courseRepo.GetCourseAllByFilter(bson.M{"year": year, "term": term})
 		if err != nil {
 			log.Println(err)
@@ -602,8 +526,8 @@ func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
 		}
 
 		coursesRes = courses
-	} else if role == "teacher" {
-		p, err := cc.profileRepo.GetProfileById(bson.M{"profile_id": profileId, "role": role}, role)
+	} else if user.Role == "teacher" {
+		p, err := cc.profileRepo.GetProfileById(bson.M{"profile_id": user.ProfileId, "role": user.Role}, user.Role)
 		if err != nil {
 			log.Println(err)
 			if err.Error() == "mongo: no documents in result" {
@@ -642,8 +566,8 @@ func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
 		}
 
 		coursesRes = courses
-	} else if role == "student" {
-		p, err := cc.profileRepo.GetProfileById(bson.M{"profile_id": profileId, "role": role}, role)
+	} else if user.Role == "student" {
+		p, err := cc.profileRepo.GetProfileById(bson.M{"profile_id": user.ProfileId, "role": user.Role}, user.Role)
 		if err != nil {
 			log.Println(err)
 			if err.Error() == "mongo: no documents in result" {
@@ -688,13 +612,17 @@ func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
 	}
 
 	return util.ResponseSuccess(c, fiber.StatusOK, "success", map[string]interface{}{
-		"profile_id":  profileId,
-		"role":        role,
 		"course_list": coursesRes,
 	})
 }
 
 func (cc *courseController) GetCourseById(c *fiber.Ctx) error {
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	id, err := util.CheckStringData(c.Query("course_id"), "course_id")
 	if err != nil {
 		log.Println(err)
@@ -725,7 +653,7 @@ func (cc *courseController) GetCourseById(c *fiber.Ctx) error {
 }
 
 func (cc *courseController) FinishCourse(c *fiber.Ctx) error {
-	err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"admin"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], cc.userRepo, []string{"admin"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -894,24 +822,3 @@ func (cc *courseController) FinishCourse(c *fiber.Ctx) error {
 		"course_update_count": courseUpdate.ModifiedCount,
 	})
 }
-
-// func createDateTime(dateTime []models.DateTime) {
-// 	for _, dt := range dateTime {
-// 		dayTime := ""
-// 		times := strings.Split(dt.Time, "-")
-// 		for _, t := range times {
-// 			if t != "" {
-// 				if len(dayTime) == 0 {
-// 					dayTime += t + "-"
-// 				} else {
-// 					tmp := strings.Split(t, ":")
-// 					if tmp[1] == "30" {
-// 						tmp[1] = "00"
-
-// 					}
-// 				}
-// 			}
-// 		}
-
-// 	}
-// }

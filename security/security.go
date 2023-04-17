@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"school-notification-backend/models"
 	"school-notification-backend/repository"
 	"strings"
 
@@ -69,42 +70,45 @@ func ParseToken(tokenStr string) (*jwt.StandardClaims, error) {
 	return claims, nil
 }
 
-func CheckRoleFromToken(token string, userRepo repository.UsersRepository, rc []string) error {
+func CheckRoleFromToken(token string, userRepo repository.UsersRepository, rc []string) (*models.User, error) {
 	if tryApikey(token) {
 		log.Println("authorized by apikey")
-		return nil
+		user := models.User{
+			Role: "server",
+		}
+		return &user, nil
 	}
 
-	if len(token) <= 6 || token[0:6] != "Bearer" {
-		return errors.New("invalid auth token")
+	if len(token) <= 7 || token[0:7] != "Bearer " {
+		return nil, errors.New("invalid auth token")
 	}
 
 	payload, err := ParseToken(token)
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
 	// log.Println(payload)
 	user, err := userRepo.GetById(payload.Id)
 	if err != nil {
 		log.Println(err)
-		return err
+		return nil, err
 	}
 	log.Println(user)
 
-	// check := true
-	// for _, v := range rc {
-	// 	if v == user.Role {
-	// 		check = false
-	// 		break
-	// 	}
-	// }
+	check := true
+	for _, v := range rc {
+		if v == user.Role || v == "all" {
+			check = false
+			break
+		}
+	}
 
-	// if check {
-	// 	return errors.New("not permission")
-	// }
+	if check {
+		return nil, errors.New("not permission")
+	}
 
-	return nil
+	return user, nil
 }
 
 func CheckRoleFromTokenInGet(token string, userRepo repository.UsersRepository, event string, role string) error {

@@ -4,6 +4,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 	"time"
 
@@ -20,16 +21,22 @@ type ConversationController interface {
 type conversationController struct {
 	conversationRepo repository.ConversationRepository
 	profileRepo      repository.ProfileRepository
+	userRepo         repository.UsersRepository
 }
 
-func NewConversationController(conversationRepo repository.ConversationRepository, profileRepo repository.ProfileRepository) ConversationController {
-	return &conversationController{conversationRepo: conversationRepo, profileRepo: profileRepo}
+func NewConversationController(conversationRepo repository.ConversationRepository, profileRepo repository.ProfileRepository, userRepo repository.UsersRepository) ConversationController {
+	return &conversationController{conversationRepo: conversationRepo, profileRepo: profileRepo, userRepo: userRepo}
 }
 
 func (co *conversationController) CreateConversation(c *fiber.Ctx) error {
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], co.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.ConversationRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -46,6 +53,11 @@ func (co *conversationController) CreateConversation(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
 	}
 	log.Println("sender id:", senderId)
+
+	if user.UserId != senderId {
+		log.Println("not permiistion")
+		return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
+	}
 
 	receiverId, err := util.CheckStringData(req.ReceiverId, "receiver_id")
 	if err != nil {
@@ -133,12 +145,23 @@ func (co *conversationController) CreateConversation(c *fiber.Ctx) error {
 }
 
 func (co *conversationController) GetByUserId(c *fiber.Ctx) error {
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], co.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	userId, err := util.CheckStringData(c.Query("user_id"), "user_id")
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
 	}
 	log.Println("find by user id:", userId)
+
+	if user.UserId != userId {
+		log.Println("not permiistion")
+		return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
+	}
 
 	conversations, err := co.conversationRepo.GetConversationAllByFilter(bson.M{"members": bson.M{
 		"$in": bson.A{

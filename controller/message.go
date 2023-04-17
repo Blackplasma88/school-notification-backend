@@ -4,6 +4,7 @@ import (
 	"log"
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
+	"school-notification-backend/security"
 	"school-notification-backend/util"
 	"time"
 
@@ -20,16 +21,22 @@ type MessageController interface {
 type messageController struct {
 	messageRepo      repository.MessageRepository
 	conversationRepo repository.ConversationRepository
+	userRepo         repository.UsersRepository
 }
 
-func NewMessageController(messageRepo repository.MessageRepository, conversationRepo repository.ConversationRepository) MessageController {
-	return &messageController{messageRepo: messageRepo, conversationRepo: conversationRepo}
+func NewMessageController(messageRepo repository.MessageRepository, conversationRepo repository.ConversationRepository, userRepo repository.UsersRepository) MessageController {
+	return &messageController{messageRepo: messageRepo, conversationRepo: conversationRepo, userRepo: userRepo}
 }
 
 func (m *messageController) CreateMessage(c *fiber.Ctx) error {
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], m.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
 
 	req := models.MessageRequest{}
-	err := c.BodyParser(&req)
+	err = c.BodyParser(&req)
 	if err != nil {
 		log.Println(err)
 		value, ok := err.(*fiber.Error)
@@ -46,6 +53,11 @@ func (m *messageController) CreateMessage(c *fiber.Ctx) error {
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
 	}
 	log.Println("sender id:", senderId)
+
+	if user.UserId != senderId {
+		log.Println("not permiistion")
+		return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
+	}
 
 	conversationId, err := util.CheckStringData(req.ConversationId, "conversation_id")
 	if err != nil {
@@ -106,12 +118,43 @@ func (m *messageController) CreateMessage(c *fiber.Ctx) error {
 }
 
 func (m *messageController) GetByConversationId(c *fiber.Ctx) error {
+	user, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], m.userRepo, []string{"all"})
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
+	}
+
 	conversationId, err := util.CheckStringData(c.Query("conversation_id"), "conversation_id")
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
 	}
 	log.Println("find by conversation id:", conversationId)
+
+	con, err := m.conversationRepo.GetConversationById(conversationId)
+	if err != nil {
+		log.Println(err)
+		if err.Error() == "mongo: no documents in result" {
+			return util.ResponseNotSuccess(c, fiber.StatusNotFound, util.ErrNotFound.Error())
+		}
+		if err.Error() == "Id is not primitive objectID" {
+			return util.ResponseNotSuccess(c, fiber.StatusBadRequest, err.Error())
+		}
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
+	check := true
+	for _, member := range con.Members {
+		if user.UserId != member {
+			check = false
+			break
+		}
+	}
+
+	if check {
+		log.Println("not permiistion")
+		return util.ResponseNotSuccess(c, fiber.StatusUnauthorized, "not permission")
+	}
 
 	messages, err := m.messageRepo.GetConversationAllByFilter(bson.M{"conversation_id": conversationId})
 	if err != nil {

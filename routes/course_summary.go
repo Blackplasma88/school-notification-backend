@@ -17,5 +17,5 @@ func NewCourseSummaryRoute(courseSummaryController controller.CourseSummaryContr
 func (r *courseSummaryRoutes) Install(app *fiber.App) {
 	app.Get("/course-summary", r.courseSummaryController.GetSummaryCourse)
 
-	app.Post("/course-summary/create", r.courseSummaryController.SummaryCourse)
+	app.Post("/course/course-id", r.courseSummaryController.SummaryCourse)
 }
