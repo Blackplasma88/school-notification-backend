@@ -8,6 +8,7 @@ import (
 	"school-notification-backend/models"
 	"school-notification-backend/repository"
 	"school-notification-backend/routes"
+	"school-notification-backend/security"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -111,7 +112,7 @@ func main() {
 
 	staticRoutes := routes.NewStaticRoutes()
 
-	initFirstData(profileRepository)
+	initFirstData(profileRepository, userRepository)
 	route := fiber.New()
 
 	route.Use(logger.New())
@@ -136,9 +137,9 @@ func main() {
 	route.Listen(":" + os.Getenv("APP_PORT"))
 }
 
-func initFirstData(profileRepo repository.ProfileRepository) {
+func initFirstData(profileRepo repository.ProfileRepository, userRepo repository.UsersRepository) {
 	err := profileRepo.GetProfileByFilterForCheckExists(bson.M{
-		"profile_id": "a-admin1",
+		"profile_id": "admin1",
 		"role":       "admin",
 	})
 	if err != nil && err.Error() == "mongo: no documents in result" {
@@ -146,11 +147,33 @@ func initFirstData(profileRepo repository.ProfileRepository) {
 			Id:        primitive.NewObjectID(),
 			CreatedAt: time.Now().Format(time.RFC3339),
 			UpdatedAt: time.Now().Format(time.RFC3339),
-			ProfileId: "a-admin1",
+			ProfileId: "admin1",
 			Name:      "admin1",
 			Role:      "admin",
 		}
 		_, err = profileRepo.Insert(profileAdmin)
+		if err != nil {
+			panic(err)
+		}
+
+		password, err := security.EncryptPassword("admin1")
+		if err != nil {
+			panic(err)
+		}
+
+		// sign up
+		id := profileAdmin.Id
+		user := models.User{
+			Id:        primitive.NewObjectID(),
+			CreatedAt: time.Now().Format(time.RFC3339),
+			Username:  "admin1",
+			Password:  password,
+			ProfileId: "admin1",
+			Role:      "admin",
+			UserId:    id.Hex(),
+		}
+
+		_, err = userRepo.InsertUser(&user)
 		if err != nil {
 			panic(err)
 		}
