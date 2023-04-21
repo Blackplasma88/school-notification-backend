@@ -211,6 +211,7 @@ func (f *faceDetectionController) UploadImageData(c *fiber.Ctx) error {
 		data.ImageStudentPathList[index] = append(data.ImageStudentPathList[index], v)
 	}
 
+	data.NumberOfImage += len(req.ImagePathList)
 	data.Status = "not"
 
 	_, err = f.faceDetectionRepo.Update(data)
@@ -331,7 +332,7 @@ func (f *faceDetectionController) GetAll(c *fiber.Ctx) error {
 }
 
 func (f *faceDetectionController) GetById(c *fiber.Ctx) error {
-	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "server"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "server", "teacher"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())
@@ -367,7 +368,7 @@ func (f *faceDetectionController) GetById(c *fiber.Ctx) error {
 }
 
 func (f *faceDetectionController) GetByClassId(c *fiber.Ctx) error {
-	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "server"})
+	_, err := security.CheckRoleFromToken(c.GetReqHeaders()["Authorization"], f.userRepo, []string{"admin", "server", "teacher"})
 	if err != nil {
 		log.Println(err)
 		return util.ResponseNotSuccess(c, fiber.ErrUnauthorized.Code, err.Error())

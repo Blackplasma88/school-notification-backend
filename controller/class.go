@@ -62,7 +62,7 @@ func (cl *classController) CreateClass(c *fiber.Ctx) error {
 		return dataList[i].CreatedAt > dataList[j].CreatedAt
 	})
 
-	if *dataList[len(dataList)-1].Status == true {
+	if *dataList[0].Status == true {
 		log.Println("school data invalid")
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, "school data invalid")
 	}

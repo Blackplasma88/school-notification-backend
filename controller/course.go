@@ -67,7 +67,7 @@ func (cc *courseController) CreateCourse(c *fiber.Ctx) error {
 		return dataList[i].CreatedAt > dataList[j].CreatedAt
 	})
 
-	if *dataList[len(dataList)-1].Status == true {
+	if *dataList[0].Status == true {
 		log.Println("school data invalid")
 		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, "school data invalid")
 	}
@@ -563,6 +563,9 @@ func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
 				return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
 			}
 
+			if course.Status == "create" {
+				continue
+			}
 			courses = append(courses, course)
 		}
 
@@ -603,6 +606,9 @@ func (cc *courseController) GetCourseByYearAndTerm(c *fiber.Ctx) error {
 				return util.ResponseNotSuccess(c, fiber.StatusBadRequest, util.ErrNotFound.Error())
 			}
 
+			if course.Status == "create" {
+				continue
+			}
 			courses = append(courses, course)
 		}
 

@@ -58,8 +58,6 @@ func main() {
 
 	// profile
 	profileRepository := repository.NewProfileRepository(conn)
-	profileController := controller.NewProfileController(profileRepository, classRepository, schoolDataRepository, userRepository)
-	profileRoutes := routes.NewProfileRoute(profileController)
 
 	// subject
 	subjectRepository := repository.NewSubjectRepository(conn)
@@ -106,6 +104,9 @@ func main() {
 	faceDetectionRepository := repository.NewFaceDetectionRepository(conn)
 	faceDetectionController := controller.NewFaceDetectionController(faceDetectionRepository, classRepository, userRepository)
 	faceDetectionRoutes := routes.NewFaceDetectionRoute(faceDetectionController)
+
+	profileController := controller.NewProfileController(profileRepository, classRepository, schoolDataRepository, userRepository, faceDetectionRepository)
+	profileRoutes := routes.NewProfileRoute(profileController)
 
 	classController := controller.NewClassController(classRepository, schoolDataRepository, profileRepository, userRepository, faceDetectionRepository)
 	classRoutes := routes.NewClassRoute(classController)

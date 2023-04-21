@@ -691,6 +691,12 @@ func (s *schoolDataController) EndTerm(c *fiber.Ctx) error {
 		}
 	}
 
+	_, err = s.schoolDataRepository.Update(data)
+	if err != nil {
+		log.Println(err)
+		return util.ResponseNotSuccess(c, fiber.StatusInternalServerError, util.ErrInternalServerError.Error())
+	}
+
 	_, err = s.schoolDataRepository.Insert(dataNew)
 	if err != nil {
 		log.Println(err)

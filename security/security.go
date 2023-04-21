@@ -36,7 +36,7 @@ func NewToken(userId string) (string, error) {
 		Id:        userId,
 		Issuer:    userId,
 		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(time.Minute * 30).Unix(),
+		ExpiresAt: time.Now().Add(time.Minute * 60).Unix(),
 	}
 
 	tokenStr := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

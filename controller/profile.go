@@ -29,10 +29,11 @@ type profileController struct {
 	classRepo            repository.ClassRepository
 	schoolDataRepository repository.SchoolDataRepository
 	userRepo             repository.UsersRepository
+	faceDetectionRepo    repository.FaceDetectionRepository
 }
 
-func NewProfileController(profileRepo repository.ProfileRepository, classRepo repository.ClassRepository, schoolDataRepository repository.SchoolDataRepository, userRepo repository.UsersRepository) ProfileController {
-	return &profileController{profileRepo: profileRepo, classRepo: classRepo, schoolDataRepository: schoolDataRepository, userRepo: userRepo}
+func NewProfileController(profileRepo repository.ProfileRepository, classRepo repository.ClassRepository, schoolDataRepository repository.SchoolDataRepository, userRepo repository.UsersRepository, faceDetectionRepo repository.FaceDetectionRepository) ProfileController {
+	return &profileController{profileRepo: profileRepo, classRepo: classRepo, schoolDataRepository: schoolDataRepository, userRepo: userRepo, faceDetectionRepo: faceDetectionRepo}
 }
 
 func (p *profileController) GetProfileAllByRole(c *fiber.Ctx) error {
@@ -227,7 +228,7 @@ func (p *profileController) CreateNewProfile(c *fiber.Ctx) error {
 	if req.Role == "teacher" {
 		profile, err = newTeacherProfile(req, p.profileRepo, p.schoolDataRepository)
 	} else if req.Role == "student" {
-		profile, err = newStudentProfile(req, p.profileRepo, p.classRepo)
+		profile, err = newStudentProfile(req, p.profileRepo, p.classRepo, p.faceDetectionRepo)
 	} else if req.Role == "parent" {
 		// profile, err = newParentProfile(req, p.profileRepo)
 	} else {
@@ -345,13 +346,13 @@ func newTeacherProfile(req models.ProfileRequest, profileRepo repository.Profile
 		return dataList[i].CreatedAt > dataList[j].CreatedAt
 	})
 
-	if *dataList[len(dataList)-1].Status == true {
+	if *dataList[0].Status == true {
 		log.Println("school data invalid")
 		return nil, errors.New("school data invalid")
 	}
 
-	year := *dataList[len(dataList)-1].Year
-	term := *dataList[len(dataList)-1].Term
+	year := *dataList[0].Year
+	term := *dataList[0].Term
 
 	p := models.ProfileTeacher{
 		Id:        primitive.NewObjectID(),
@@ -373,7 +374,7 @@ func newTeacherProfile(req models.ProfileRequest, profileRepo repository.Profile
 	return &p, nil
 }
 
-func newStudentProfile(req models.ProfileRequest, profileRepo repository.ProfileRepository, classRepo repository.ClassRepository) (*models.ProfileStudent, error) {
+func newStudentProfile(req models.ProfileRequest, profileRepo repository.ProfileRepository, classRepo repository.ClassRepository, faceDetectionRepo repository.FaceDetectionRepository) (*models.ProfileStudent, error) {
 
 	err := profileRepo.GetProfileByFilterForCheckExists(bson.M{
 		"profile_id": req.ProfileId,
@@ -422,6 +423,21 @@ func newStudentProfile(req models.ProfileRequest, profileRepo repository.Profile
 			log.Println(err)
 			return nil, err
 		}
+	}
+
+	faceData, err := faceDetectionRepo.GetByFilter(bson.M{"class_id": classId})
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	faceData.StudentIdList = append(faceData.StudentIdList, req.ProfileId)
+	faceData.NumberOfStudent = len(faceData.StudentIdList)
+	// var res [][]string
+	faceData.ImageStudentPathList = append(faceData.ImageStudentPathList, []string{})
+	_, err = faceDetectionRepo.Update(faceData)
+	if err != nil {
+		log.Println(err)
+		return nil, err
 	}
 
 	p := models.ProfileStudent{
